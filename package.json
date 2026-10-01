@@ -1,0 +1,15 @@
+{
+  "name": "chromatica",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node db/seed.js",
+    "test": "node test/cobros.test.js && node test/cierres.test.js"
+  },
+  "dependencies": {
+    "express": "^5.0.0",
+    "nodemailer": "^7.0.0"
+  }
+}
