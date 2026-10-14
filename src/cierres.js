@@ -2,6 +2,7 @@ const express = require('express');
 const { db, audit } = require('./db');
 const { ApiError } = require('./util');
 const { normalizarFecha } = require('./fechas');
+const { crear: crearCopia } = require('./copias');
 
 const router = express.Router();
 const ahora = () => db.prepare("SELECT datetime('now','localtime') AS f").get().f;
@@ -94,6 +95,7 @@ router.post('/', (req, res) => {
     audit('cierre', id, 'crear', { hasta, total_cobrado: r.total_cobrado, ganancia_local: r.ganancia_local });
     return id;
   })();
+  try { crearCopia('cierre'); } catch (e) { console.error('Copia al cerrar falló:', e.message); }
   res.status(201).json(db.prepare('SELECT * FROM cierre WHERE id = ?').get(id));
 });
 

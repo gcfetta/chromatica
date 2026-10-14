@@ -52,12 +52,36 @@ const { iniciar } = require('./helper');
       assert.equal(c1.pago_empleados, 16000);
     });
 
-    await prueba('con tarjeta no hay descuento', async () => {
+    await prueba('con cuotas no hay descuento; las cuotas deben ser una opción válida', async () => {
+      const mal = { metodo_cobro: 'tarjeta', servicios: [{ variante_id: CORTE }] };
+      assert.equal((await api('POST', '/api/cobros', mal)).status, 400, 'tarjeta sin cuotas');
+      assert.equal((await api('POST', '/api/cobros', { ...mal, cuotas: 7 })).status, 400, 'cuotas que no existen');
       const r = await api('POST', '/api/cobros', {
-        metodo_cobro: 'tarjeta',
+        metodo_cobro: 'tarjeta', cuotas: 3,
         servicios: [{ variante_id: CORTE }, { variante_id: BABY }, { categoria: 'otro', descripcion: 'Peinado', monto: 30000 }],
       });
       assert.equal(r.data.total, 200000);
+      assert.equal(r.data.cuotas, 3);
+    });
+
+    await prueba('efectivo y transferencia son lo mismo (se guarda como efectivo, sin cuotas)', async () => {
+      const r = await api('POST', '/api/cobros', { metodo_cobro: 'transferencia', cuotas: 3, servicios: [{ variante_id: BABY }] });
+      assert.equal(r.data.metodo_cobro, 'efectivo');
+      assert.equal(r.data.cuotas, null);
+      assert.equal(r.data.total, 104000);
+    });
+
+    await prueba('vista previa (/calcular) da lo mismo que el cobro guardado y no guarda nada', async () => {
+      const body = { metodo_cobro: 'efectivo', sena: true, servicios: [{ variante_id: CORTE }, { variante_id: BABY, empleado_id: emp.id }] };
+      const p = (await api('POST', '/api/cobros/calcular', body)).data;
+      const g = (await api('POST', '/api/cobros', body)).data;
+      assert.equal(p.total, g.total);
+      assert.equal(p.saldo, g.saldo);
+      assert.equal(p.pago_empleados, g.pago_empleados);
+      assert.equal(p.horas_pendientes, 1);
+      const vacio = await api('POST', '/api/cobros/calcular', { metodo_cobro: 'efectivo', servicios: [] });
+      assert.equal(vacio.status, 200);
+      assert.equal(vacio.data.total, 0);
     });
 
     await prueba('color por hora: horas cargadas al cobrar -> horas x valor de la hora', async () => {
@@ -86,7 +110,7 @@ const { iniciar } = require('./helper');
 
     await prueba('nutri asociada al empleado usa su % sobre el precio final', async () => {
       const l = (await api('POST', '/api/cobros', {
-        metodo_cobro: 'transferencia', servicios: [{ variante_id: RITUAL, empleado_id: emp.id }],
+        metodo_cobro: 'efectivo', servicios: [{ variante_id: RITUAL, empleado_id: emp.id }],
       })).data.servicios[0];
       assert.equal(l.precio_cobrado, 60000);
       assert.equal(l.pago_monto, 24000);
@@ -144,6 +168,9 @@ const { iniciar } = require('./helper');
     await prueba('el catálogo trae la duración promedio como texto informativo', async () => {
       const s = (await api('GET', '/api/servicios')).data.find((x) => x.nombre === 'Babylights');
       assert.equal(s.duracion_texto, '3 a 5 hs');
+      const c = (await api('GET', '/api/servicios')).data.find((x) => x.nombre === 'Face framing');
+      assert.equal(c.subgrupo, 'Largo');
+      assert.deepEqual((await api('GET', '/api/config')).data.cuotas_opciones, [1, 3]);
     });
   } finally { cerrar('Cobros'); }
 })();

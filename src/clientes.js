@@ -8,14 +8,14 @@ const CAMPOS = ['nombre', 'contacto', 'ficha', 'observacion', 'notas_importantes
 router.get('/', (req, res) => {
   const q = `%${(req.query.q || '').trim()}%`;
   res.json(db.prepare(`SELECT id, nombre, contacto, ficha, observacion, notas_importantes, activo
-    FROM cliente WHERE activo = 1 AND (nombre LIKE ? OR contacto LIKE ?) ORDER BY nombre LIMIT 500`).all(q, q));
+    FROM cliente WHERE activo = 1 AND nombre LIKE ? ORDER BY nombre LIMIT 50`).all(q));
 });
 
 router.get('/:id', (req, res) => {
   const c = db.prepare('SELECT * FROM cliente WHERE id = ?').get(Number(req.params.id));
   if (!c) throw new ApiError(404, 'Clienta inexistente');
   const historial = db.prepare(`
-    SELECT t.id AS cobro_id, t.fecha, ts.recorrido, ts.precio_cobrado, t.anulado
+    SELECT t.id AS cobro_id, t.fecha, t.total, t.ficha, ts.recorrido, ts.precio_cobrado, t.anulado
     FROM turno t JOIN turno_servicio ts ON ts.turno_id = t.id
     WHERE t.cliente_id = ? ORDER BY t.fecha DESC, ts.id`).all(c.id);
   res.json({ ...c, historial });

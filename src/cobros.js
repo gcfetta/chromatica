@@ -4,7 +4,6 @@ const { ApiError, cfg } = require('./util');
 const { normalizarFecha } = require('./fechas');
 
 const router = express.Router();
-const METODOS = ['efectivo', 'transferencia', 'tarjeta'];
 const CAT_LABEL = { corte: 'Corte', color: 'Color', nutri: 'Nutri', otro: 'Otro' };
 
 const entero = (v, msg) => {
@@ -48,17 +47,18 @@ function pagoDeLinea(empleadoId, categoria, cobrado, horas) {
   return { pago_modo: modo, pago_valor: valor, pago_monto: horas == null ? 0 : Math.round(horas * valor), horas };
 }
 
-// Calcula una línea: precio de lista, precio final (con descuento de efectivo) y pago al empleado
+// Calcula una línea: precio de lista, precio final (con descuento de efectivo) y comisión
 function calcularLinea(l, metodo, descPct) {
   let categoria, recorrido, lista, variante_id = null, automatico;
 
   if (l.variante_id != null) {
-    const v = db.prepare(`SELECT v.id, v.etiqueta, v.precio_tarjeta, v.precio_efectivo, s.nombre, s.categoria
+    const v = db.prepare(`SELECT v.id, v.etiqueta, v.precio_tarjeta, v.precio_efectivo, s.nombre, s.categoria, s.subgrupo
       FROM servicio_variante v JOIN servicio s ON s.id = v.servicio_id
       WHERE v.id = ? AND v.activo = 1 AND s.activo = 1`).get(Number(l.variante_id));
     if (!v) throw new ApiError(400, `Servicio inexistente (variante ${l.variante_id})`);
     categoria = v.categoria; variante_id = v.id; lista = v.precio_tarjeta;
-    recorrido = [CAT_LABEL[categoria], v.nombre, v.etiqueta === 'Único' ? null : v.etiqueta].filter(Boolean).join(' › ');
+    recorrido = [CAT_LABEL[categoria], categoria === 'corte' ? v.subgrupo : null, v.nombre, ['Único', 'Desde'].includes(v.etiqueta) ? null : v.etiqueta].filter(Boolean).join(' › ');
+
     // cortes: precio fijo; color y nutri: efectivo/transferencia llevan descuento
     automatico = metodo === 'tarjeta' || categoria === 'corte' ? lista : v.precio_efectivo;
   } else if (l.categoria === 'otro') {
@@ -108,38 +108,80 @@ function detalle(id) {
   };
 }
 
-// Crea el cobro (= "turno")
-router.post('/', (req, res) => {
-  const b = req.body || {};
-  if (!METODOS.includes(b.metodo_cobro)) throw new ApiError(400, 'Método de pago inválido');
-  if (!Array.isArray(b.servicios) || !b.servicios.length) throw new ApiError(400, 'Agregá al menos un servicio');
+// Valida y calcula un cobro completo (lo usan la vista previa y el guardado)
+function armar(b, { permitirVacio = false } = {}) {
+  const metodo = b.metodo_cobro === 'transferencia' ? 'efectivo' : b.metodo_cobro;   // son lo mismo
+  if (!['efectivo', 'tarjeta'].includes(metodo)) throw new ApiError(400, 'Método de pago inválido');
+  let cuotas = null;
+  if (metodo === 'tarjeta') {
+    const opciones = String(cfg('cuotas_opciones') || '1').split(',').map(Number);
+    cuotas = Number(b.cuotas);
+    if (!opciones.includes(cuotas)) throw new ApiError(400, `Cuotas inválidas (opciones: ${opciones.join(', ')})`);
+  }
+  if (!Array.isArray(b.servicios) || (!b.servicios.length && !permitirVacio))
+    throw new ApiError(400, 'Agregá al menos un servicio');
   if (b.cliente_id != null && !db.prepare('SELECT 1 FROM cliente WHERE id = ?').get(Number(b.cliente_id)))
     throw new ApiError(400, 'Clienta inexistente');
 
   const descPct = Number(cfg('descuento_efectivo_pct') || 0);
-  const lineas = b.servicios.map((l) => calcularLinea(l, b.metodo_cobro, descPct));
+  const lineas = b.servicios.map((l) => calcularLinea(l, metodo, descPct));
   const total = lineas.reduce((a, l) => a + l.precio_cobrado, 0);
 
   let sena = 0;
   if (b.sena === true) sena = Number(cfg('sena_default') || 0);
   else if (b.sena != null && b.sena !== false) sena = entero(b.sena, 'Seña inválida');
-  if (sena > total) throw new ApiError(400, 'La seña no puede ser mayor al total');
+  if (sena > total && !(permitirVacio && !lineas.length)) throw new ApiError(400, 'La seña no puede ser mayor al total');
+  return { metodo, cuotas, lineas, total, sena };
+}
 
+// Vista previa sin guardar: el resumen de la pantalla Cobrar sale de acá (una sola fuente de cálculo)
+router.post('/calcular', (req, res) => {
+  const r = armar(req.body || {}, { permitirVacio: true });
+  res.json({
+    metodo_cobro: r.metodo, cuotas: r.cuotas, total: r.total, sena: r.sena, saldo: r.total - r.sena,
+    servicios: r.lineas.map((l) => ({ ...l, descuento: l.precio_lista - l.precio_cobrado,
+      horas_pendientes: l.pago_modo === 'hora' && l.horas == null ? 1 : 0 })),
+    pago_empleados: r.lineas.reduce((a, l) => a + l.pago_monto, 0),
+    horas_pendientes: r.lineas.filter((l) => l.pago_modo === 'hora' && l.horas == null).length,
+  });
+});
+
+// Crea el cobro (= "turno")
+router.post('/', (req, res) => {
+  const b = req.body || {};
+  const { metodo, cuotas, lineas, total, sena } = armar(b);
   const fecha = normalizarFecha(b.fecha);
   const id = db.transaction(() => {
-    const id = db.prepare(`INSERT INTO turno(cliente_id, fecha, metodo_cobro, total, sena, ficha, notas)
-      VALUES (?, COALESCE(?, datetime('now','localtime')), ?, ?, ?, ?, ?)`)
-      .run(b.cliente_id != null ? Number(b.cliente_id) : null, fecha, b.metodo_cobro, total, sena,
+    const id = db.prepare(`INSERT INTO turno(cliente_id, fecha, metodo_cobro, cuotas, total, sena, ficha, notas)
+      VALUES (?, COALESCE(?, datetime('now','localtime')), ?, ?, ?, ?, ?, ?)`)
+      .run(b.cliente_id != null ? Number(b.cliente_id) : null, fecha, metodo, cuotas, total, sena,
         b.ficha ?? null, b.notas ?? null).lastInsertRowid;
     const ins = db.prepare(`INSERT INTO turno_servicio(turno_id, variante_id, categoria, recorrido, empleado_id,
       precio_lista, precio_cobrado, editado, pago_modo, pago_valor, pago_monto, horas) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
     for (const l of lineas)
       ins.run(id, l.variante_id, l.categoria, l.recorrido, l.empleado_id, l.precio_lista, l.precio_cobrado,
         l.editado, l.pago_modo, l.pago_valor, l.pago_monto, l.horas);
-    audit('turno', id, 'crear', { total, sena, metodo: b.metodo_cobro, servicios: lineas.length });
+    audit('turno', id, 'crear', { total, sena, metodo, cuotas, servicios: lineas.length });
     return id;
   })();
   res.status(201).json(detalle(id));
+});
+
+// Historial: cobros entre dos fechas (AAAA-MM-DD), con sus servicios
+router.get('/', (req, res) => {
+  const desde = normalizarFecha(req.query.desde) || '0000-01-01 00:00:00';
+  const hasta = normalizarFecha(req.query.hasta, true) || '9999-12-31 23:59:59';
+  const cobros = db.prepare(`SELECT t.id, t.fecha, t.metodo_cobro, t.cuotas, t.total, t.sena, t.anulado, t.cierre_id,
+      c.nombre AS clienta FROM turno t LEFT JOIN cliente c ON c.id = t.cliente_id
+      WHERE t.fecha BETWEEN ? AND ? ORDER BY t.fecha DESC, t.id DESC`).all(desde, hasta);
+  const ls = db.prepare(`SELECT ts.id, ts.turno_id, ts.recorrido, ts.precio_cobrado, ts.pago_modo, ts.horas, e.nombre AS empleado
+      FROM turno_servicio ts LEFT JOIN empleado e ON e.id = ts.empleado_id
+      WHERE ts.turno_id IN (SELECT id FROM turno WHERE fecha BETWEEN ? AND ?) ORDER BY ts.id`).all(desde, hasta);
+  for (const c of cobros) {
+    c.servicios = ls.filter((l) => l.turno_id === c.id);
+    c.horas_pendientes = c.servicios.filter((l) => l.pago_modo === 'hora' && l.horas == null).length;
+  }
+  res.json(cobros);
 });
 
 router.get('/:id', (req, res) => {

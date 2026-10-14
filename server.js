@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const { db, DB_FILE } = require('./src/db');
 const { router: authRouter, requireAuth } = require('./src/auth');
 const { router: empleadosRouter } = require('./src/empleados');
@@ -6,10 +7,16 @@ const { router: clientesRouter } = require('./src/clientes');
 const { router: cobrosRouter } = require('./src/cobros');
 const { router: movimientosRouter } = require('./src/movimientos');
 const { router: cierresRouter } = require('./src/cierres');
+const { router: gananciasRouter } = require('./src/ganancias');
+const { router: copiasRouter, iniciarAuto } = require('./src/copias');
+const { router: serviciosRouter } = require('./src/servicios');
 const { ApiError, cfg } = require('./src/util');
 
 const app = express();
 app.use(express.json());
+// interfaz y fuentes locales (no dependen de internet)
+app.use('/fonts', express.static(path.join(__dirname, 'node_modules', '@fontsource'), { maxAge: '7d' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -34,7 +41,7 @@ app.put('/api/config/mail', requireAuth, (req, res) => {
 
 app.get('/api/servicios', requireAuth, (_req, res) => {
   res.json(db.prepare(`
-    SELECT s.id, s.nombre, s.categoria, s.grupo, s.duracion_texto,
+    SELECT s.id, s.nombre, s.categoria, s.grupo, s.subgrupo, s.duracion_texto,
            v.id AS variante_id, v.etiqueta, v.precio_tarjeta, v.precio_efectivo, v.duracion_min, v.precio_desde
     FROM servicio s JOIN servicio_variante v ON v.servicio_id = s.id
     WHERE s.activo = 1 AND v.activo = 1
@@ -46,13 +53,19 @@ app.get('/api/config', requireAuth, (_req, res) => {
     descuento_efectivo_pct: Number(cfg('descuento_efectivo_pct')),
     sena_default: Number(cfg('sena_default')),
     comision_default_pct: Number(cfg('comision_default_pct')),
+    cuotas_opciones: String(cfg('cuotas_opciones') || '1').split(',').map(Number),
   });
 });
+
+app.use('/api/servicios', requireAuth, serviciosRouter);
 app.use('/api/empleados', requireAuth, empleadosRouter);
 app.use('/api/clientes', requireAuth, clientesRouter);
 app.use('/api/cobros', requireAuth, cobrosRouter);
 app.use('/api/movimientos', requireAuth, movimientosRouter);
 app.use('/api/cierres', requireAuth, cierresRouter);
+app.use('/api/cierres', requireAuth, cierresRouter);
+app.use('/api/ganancias', requireAuth, gananciasRouter);
+app.use('/api/copias', requireAuth, copiasRouter);
 
 // errores de validación -> JSON claro
 app.use((err, _req, res, _next) => {
@@ -62,4 +75,4 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '127.0.0.1', () => console.log(`Chromatica en http://localhost:${PORT}`));
+app.listen(PORT, '127.0.0.1', () => { console.log(`Chromatica en http://localhost:${PORT}`); iniciarAuto(); });

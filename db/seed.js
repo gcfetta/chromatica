@@ -110,6 +110,17 @@ const DURACIONES = {
 const updDur = db.prepare('UPDATE servicio SET duracion_texto = ? WHERE nombre = ?');
 for (const [nombre, txt] of Object.entries(DURACIONES)) updDur.run(txt, nombre);
 
+// ---- Cortes: subgrupo Corto / Largo ----
+const SUBGRUPOS = {
+  'Corte tipo barbería o cortos clásicos': 'Corto', 'Mantenimiento barbería o cortos clásicos': 'Corto',
+  'Extra barba (clásicos)': 'Corto', 'Corte corto de diseño/vanguardia': 'Corto',
+  'Mantenimiento corte de diseño/vanguardia': 'Corto', 'Extra barba (diseño)': 'Corto',
+  'Corte completo (cabello largo)': 'Largo', 'Mantenimiento de cortes largos': 'Largo',
+  'Face framing': 'Largo', 'Detalles / turno corto': 'Largo',
+};
+const updSub = db.prepare('UPDATE servicio SET subgrupo = ? WHERE nombre = ?');
+for (const [nombre, sub] of Object.entries(SUBGRUPOS)) updSub.run(sub, nombre);
+
 const n = db.prepare('SELECT COUNT(*) c FROM servicio').get().c;
 const v = db.prepare('SELECT COUNT(*) c FROM servicio_variante').get().c;
 console.log(`Seed OK: ${n} servicios, ${v} variantes`);

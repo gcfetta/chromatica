@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node db/seed.js",
-    "test": "node test/cobros.test.js && node test/cierres.test.js"
+    "test": "node test/cobros.test.js && node test/cierres.test.js && node test/ganancias.test.js && node test/copias.test.js  && node test/servicios.test.js"
   },
   "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
     "express": "^5.0.0",
     "nodemailer": "^7.0.0"
   }
