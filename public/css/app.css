@@ -247,3 +247,38 @@ select:focus,input:focus,textarea:focus{outline:2px solid var(--oro-claro);borde
 .cli-campos .cam{margin-top:4px}.cli-campos textarea{resize:none}
 .cli-hist{flex:1;min-height:0;display:flex;flex-direction:column;background:#fff}
 .hist-lista{flex:1;min-height:0;overflow:auto}
+
+/* cobrar: resumen al revés (datos y botón arriba, servicios abajo) */
+.panel.der{display:flex;flex-direction:column;max-height:calc(100vh - 40px);padding:18px 20px}
+.res-top{flex:none}
+.res-serv{flex:none;margin-top:14px;padding-top:10px;border-top:1px solid var(--borde);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--sec)}
+.panel.der .lineas{flex:1;min-height:60px;max-height:none;overflow:auto;border-top:0}
+.fechachica{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:13px;color:var(--sec)}
+.fechachica input{width:auto}
+/* clientas: cards de tamaño fijo, la lista se desliza como una libreta */
+.cli-lista{display:flex;flex-direction:column;gap:6px;align-content:flex-start;overflow-y:auto}
+.cli-lista button{flex:none;height:56px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cli-lista small{overflow:hidden;text-overflow:ellipsis;min-height:14px}
+.cli-lista .nota{flex:none}
+.cli-btns{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.cli-btns .btn-lnk:disabled{opacity:.4;cursor:not-allowed}
+/* servicios: edición de la carta */
+.vfila.ed{display:grid;grid-template-columns:minmax(0,1fr) 96px auto auto;gap:6px;align-items:center}
+.vfila.ed input[type=text]{width:100%;min-width:0}.vfila.ed input[type=number]{width:96px}
+.vfila .desde{font-size:11px;color:var(--sec);white-space:nowrap}.vfila .desde input{width:auto}
+.ctl{display:flex;gap:2px}.mini-b{border:1px solid var(--borde);background:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;color:var(--verde);padding:0}
+.mini-b:disabled{opacity:.3;cursor:default}.mini-b:hover:not(:disabled){border-color:var(--oro)}
+.nivel{display:flex;align-items:center;gap:8px}.nivel .sp,.srv-ctl .sp,.srv-pie .sp,.blk-cab .sp{flex:1}
+.srv-ctl,.srv-pie{display:flex;align-items:center;gap:6px;margin-top:8px}
+.srv-pie{border-top:1px dashed var(--borde);padding-top:8px}.srv-pie select{width:auto;max-width:130px}
+.blk{border:1px solid var(--borde);border-radius:12px;padding:10px;margin-bottom:8px;background:#fcfaf4}
+.blk-cab{display:flex;align-items:center;gap:8px;margin-bottom:6px}.blk-cab select{width:auto}
+.cat-fila{display:grid;grid-template-columns:minmax(0,1fr) 80px 28px 28px auto;gap:6px;align-items:center;margin-top:6px}
+.cat-fila small{color:var(--sec);font-size:11px}
+
+/* servicios: la barra siempre en una sola fila */
+.srv-barra{flex-wrap:nowrap;gap:12px}
+.srv-chips{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.srv-chips::-webkit-scrollbar{display:none}
+.srv-chips .chip{flex:none;white-space:nowrap}
+.srv-btns{flex:none;display:flex;gap:8px}
+.srv-btns .btn-oro{white-space:nowrap;padding-left:12px;padding-right:12px}

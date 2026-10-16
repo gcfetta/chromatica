@@ -49,4 +49,15 @@ router.put('/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM cliente WHERE id = ?').get(id));
 });
 
+// Solo se puede eliminar una ficha sin turnos asociados (los anulados también cuentan: hay que eliminarlos antes)
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const c = db.prepare('SELECT * FROM cliente WHERE id = ?').get(id);
+  if (!c) throw new ApiError(404, 'Clienta inexistente');
+  const n = db.prepare('SELECT COUNT(*) n FROM turno WHERE cliente_id = ?').get(id).n;
+  if (n) throw new ApiError(409, 'Esta clienta tiene turnos asociados, no se puede eliminar la ficha');
+  db.transaction(() => { db.prepare('DELETE FROM cliente WHERE id = ?').run(id); audit('cliente', id, 'eliminar', { ...c }); })();
+  res.json({ ok: true });
+});
+
 module.exports = { router };

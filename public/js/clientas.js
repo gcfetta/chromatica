@@ -36,7 +36,8 @@ const Clientas = (() => {
     const campo = (k, t, span, filas = 0) => `<div style="grid-column:span ${span}"><label class="cam">${t}</label>${filas ? `<textarea rows="${filas}" data-k="${k}">${h(c[k] || '')}</textarea>` : `<input type="text" data-k="${k}" value="${h(c[k] || '')}">`}</div>`;
     $('#cl-ficha', el).innerHTML = `<div class="panel cli-datos"><div class="cli-cab"><div><div class="eyebrow">Ficha</div><h2>${h(c.nombre)}</h2></div>
         <div class="resumen-cli"><div><b>${validas.length}</b>turnos</div><div><b>${peso(validas.reduce((a, v) => a + v.total, 0))}</b>total cobrado</div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
-        <button class="btn-verde" style="width:auto" data-acc="guardar">Guardar ficha</button></div>
+        <div class="cli-btns"><button class="btn-verde" style="width:auto" data-acc="guardar">Guardar ficha</button>
+          <button class="btn-lnk" data-acc="eliminar" ${visitas.length ? 'disabled title="Tiene turnos asociados: no se puede eliminar"' : ''}>Eliminar ficha</button></div></div>
       <div class="cli-campos">${campo('nombre', 'Nombre', 3)}${campo('contacto', 'Contacto', 3)}${campo('ficha', 'Ficha', 2, 2)}${campo('observacion', 'Observación', 2, 2)}${campo('notas_importantes', 'Notas importantes', 2, 2)}</div></div>
       <div class="panel cli-hist"><div class="hist-cab"><h3>Historial de turnos</h3>
         <div class="pager"><button class="chev" data-acc="pag" data-d="-1" ${pag === 0 ? 'disabled' : ''}>‹</button><span>${visitas.length ? `${pag * POR_PAG + 1}–${pag * POR_PAG + ver.length} de ${visitas.length}` : '0'}</span><button class="chev" data-acc="pag" data-d="1" ${pag >= paginas - 1 ? 'disabled' : ''}>›</button></div></div>
@@ -56,6 +57,16 @@ const Clientas = (() => {
         const nombre = ($('#cl-buscar', el).value || '').trim();
         if (!nombre) return toast('Escribí el nombre en el buscador y tocá de nuevo', { error: true });
         const c = await api('POST', '/api/clientes', { nombre }); q = ''; $('#cl-buscar', el).value = ''; await ficha(c.id); toast('Clienta creada');
+              } else if (a === 'eliminar') {
+        if (b.disabled) return;
+        doble(b, '¿Seguro? Tocá de nuevo para eliminar', async () => {
+          try {
+            await api('DELETE', `/api/clientes/${sel}`); estadoGuardado(true); toast('Ficha eliminada'); sel = null;
+            const l = await lista();
+            if (l.length) await ficha(l[0].id); else $('#cl-ficha', el).innerHTML = '<p class="nota">Todavía no hay clientas. Escribí un nombre en el buscador y tocá "Nueva clienta".</p>';
+          } catch (e) { estadoGuardado(false); toast(e.message, { error: true }); }
+        });
+        
       } else if (a === 'guardar') {
         const body = {}; el.querySelectorAll('#cl-ficha [data-k]').forEach((i) => { body[i.dataset.k] = i.value.trim(); });
         await api('PUT', `/api/clientes/${sel}`, body); estadoGuardado(true); toast('Ficha guardada'); await ficha(sel, true);

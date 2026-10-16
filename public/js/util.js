@@ -56,7 +56,7 @@ function cerrarCapa(capa) {
 
 // Buscador de clienta en un solo campo: al escribir aparecen las coincidencias (nombre o contacto);
 // al elegir una queda en el campo y se puede limpiar con la ×.
-function selectorClienta(cont, { valor = null, onCambio = () => {} } = {}) {
+function selectorClienta(cont, { valor = null, onCambio = () => {}, diferir = false } = {}) {
   let sel = valor, timer;
   cont.classList.add('combo');
   cont.innerHTML = '<input type="text" autocomplete="off" placeholder="Buscar por nombre o contacto"><button type="button" class="combo-x" title="Limpiar" hidden>×</button><div class="combo-lista" hidden></div>';
@@ -77,7 +77,8 @@ function selectorClienta(cont, { valor = null, onCambio = () => {} } = {}) {
     ev.preventDefault();
     const b = ev.target.closest('button'); if (!b) return;
     try {
-      if (b.dataset.nueva) { const c = await api('POST', '/api/clientes', { nombre: inp.value.trim() }); sel = { id: c.id, nombre: c.nombre }; }
+      if (b.dataset.nueva && diferir) sel = { id: null, nombre: inp.value.trim(), nuevo: true };   // se crea al confirmar el modal
+      else if (b.dataset.nueva) { const c = await api('POST', '/api/clientes', { nombre: inp.value.trim() }); sel = { id: c.id, nombre: c.nombre }; }
       else sel = { id: Number(b.dataset.id), nombre: b.dataset.n };
       pintar(); onCambio(sel);
     } catch (e) { toast(e.message, { error: true }); }

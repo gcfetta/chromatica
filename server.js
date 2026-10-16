@@ -45,14 +45,25 @@ app.get('/api/servicios', requireAuth, (_req, res) => {
            v.id AS variante_id, v.etiqueta, v.precio_tarjeta, v.precio_efectivo, v.duracion_min, v.precio_desde
     FROM servicio s JOIN servicio_variante v ON v.servicio_id = s.id
     WHERE s.activo = 1 AND v.activo = 1
-    ORDER BY s.id, v.id`).all());
+    ORDER BY s.orden, s.id, v.orden, v.id`).all());
+});
+
+app.put('/api/config/empleado-corte', requireAuth, (req, res) => {
+  const id = req.body?.empleado_id;
+  if (id == null) db.prepare("DELETE FROM config WHERE clave = 'empleado_corte'").run();
+  else {
+    if (!db.prepare('SELECT 1 FROM empleado WHERE id = ? AND activo = 1').get(Number(id))) return res.status(400).json({ error: 'Empleado inválido' });
+    db.prepare('INSERT INTO config(clave, valor) VALUES (?,?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor').run('empleado_corte', String(Number(id)));
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/config', requireAuth, (_req, res) => {
   res.json({
     descuento_efectivo_pct: Number(cfg('descuento_efectivo_pct')),
-    sena_default: Number(cfg('sena_default')),
+    sena_default: Number(cfg('sena_default')),     empleado_corte: Number(cfg('empleado_corte')) || null,
     comision_default_pct: Number(cfg('comision_default_pct')),
+    niveles: (() => { try { return JSON.parse(cfg('niveles') || '[]'); } catch { return []; } })(),
     cuotas_opciones: String(cfg('cuotas_opciones') || '1').split(',').map(Number),
   });
 });

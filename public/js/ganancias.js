@@ -4,7 +4,7 @@ const Ganancias = (() => {
   const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
   let el, tab = 'resumen';
   const R = { tipo: 'semana', offset: 0 };      // período del resumen
-  const H = { desde: '', hasta: '' };           // rango del historial
+  const H = { desde: '', hasta: '', modo: 'semana' };   // rango del historial (modo: semana | mes | rango)        // rango del historial
   const P = { mes: null, emp: '' };             // pagos al personal
   const C = { hasta: '', nota: '', i: 0 };      // cierre de caja (i = mes visible de los cierres anteriores)
   const nombreMes = (ym) => `${MESES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
@@ -16,9 +16,20 @@ const Ganancias = (() => {
     return [lun.toLocaleDateString('en-CA'), dom.toLocaleDateString('en-CA')];
   }
 
+    const aFecha = (iso) => new Date(iso + 'T12:00:00');
+  const sumar = (iso, dias) => { const d = aFecha(iso); d.setDate(d.getDate() + dias); return d.toLocaleDateString('en-CA'); };
+  const semanaDe = (iso) => { const d = aFecha(iso); const lun = sumar(iso, -((d.getDay() + 6) % 7)); return [lun, sumar(lun, 6)]; };
+  const mesDe = (iso) => { const d = aFecha(iso), y = d.getFullYear(), m = d.getMonth(); return [new Date(y, m, 1, 12).toLocaleDateString('en-CA'), new Date(y, m + 1, 0, 12).toLocaleDateString('en-CA')]; };
+  const rangoHist = (modo, ref) => (modo === 'mes' ? mesDe(ref) : semanaDe(ref));
+  // mueve el período del historial: una semana o un mes entero (d = -1 / +1)
+  function moverHist(d) {
+    if (H.modo === 'mes') { const x = aFecha(H.desde); x.setMonth(x.getMonth() + d, 1); [H.desde, H.hasta] = mesDe(x.toLocaleDateString('en-CA')); }
+    else { if (H.modo === 'rango') H.modo = 'semana'; [H.desde, H.hasta] = semanaDe(sumar(H.desde, 7 * d)); }
+  }
+
   async function montar(contenedor, { abrir } = {}) {
     el = contenedor;
-    if (!H.desde) [H.desde, H.hasta] = semanaActual();
+    if (!H.desde) { [H.desde, H.hasta] = semanaActual(); H.modo = 'semana'; }
     if (!C.hasta) C.hasta = hoyISO();
     if (abrir) tab = abrir;
     el.onclick = onClick; el.onchange = onChange;
@@ -53,8 +64,13 @@ const Ganancias = (() => {
   async function historial() {
     const l = await api('GET', `/api/cobros?desde=${H.desde}&hasta=${H.hasta}`);
     const validos = l.filter((c) => !c.anulado);
-    return `<div class="filtro"><label>Desde <input type="date" data-campo="h-desde" value="${H.desde}"></label><label>Hasta <input type="date" data-campo="h-hasta" value="${H.hasta}"></label>
-      <button class="btn-lnk" data-acc="esta-semana">Esta semana</button></div>
+    const sigDesde = H.modo === 'mes' ? mesDe(sumar(H.hasta, 1))[0] : sumar(H.desde, 7);
+    const etiqueta = H.modo === 'mes' ? nombreMes(H.desde) : `${fdia(H.desde)} al ${fdia(H.hasta)}`;
+    return `<div class="per-nav"><div class="seg"><button class="${H.modo === 'semana' ? 'on' : ''}" data-acc="h-modo" data-m="semana">Semana</button><button class="${H.modo === 'mes' ? 'on' : ''}" data-acc="h-modo" data-m="mes">Mes completo</button></div>
+        ${chev('h-mover', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${H.modo === 'mes' ? `<small>${l.length} ${l.length === 1 ? 'cobro' : 'cobros'} del mes</small>` : ''}</div>${chev('h-mover', 'data-d="1"', '›', sigDesde > hoyISO())}
+        <button class="btn-lnk" data-acc="esta-semana">Hoy</button></div>
+      <div class="filtro"><label>Desde <input type="date" data-campo="h-desde" value="${H.desde}"></label><label>Hasta <input type="date" data-campo="h-hasta" value="${H.hasta}"></label></div>
+
       ${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Clienta</th><th>Servicios</th><th class="r">Precio final</th><th></th></tr>
       ${l.map((c) => `<tr class="fila-cobro ${c.anulado ? 'anulado' : ''}" data-acc="ver" data-id="${c.id}"><td>${fdia(c.fecha)}</td><td>${h(c.clienta || '—')}</td>
         <td>${c.servicios.map((s) => h(s.recorrido.replaceAll(' › ', ' · '))).join('<br>')}</td><td class="r">${peso(c.total)}</td>
@@ -121,7 +137,9 @@ const Ganancias = (() => {
     'per-hoy': () => { R.offset = 0; return pintar(); },
     pmes: (d) => { if (d.m) { P.mes = d.m; return pintar(); } },
     cmes: (d) => { C.i += Number(d.d); return pintar(); },
-    'esta-semana': () => { [H.desde, H.hasta] = semanaActual(); return pintar(); },
+    'esta-semana': () => { [H.desde, H.hasta] = rangoHist(H.modo === 'mes' ? 'mes' : 'semana', hoyISO()); if (H.modo === 'rango') H.modo = 'semana'; return pintar(); },
+    'h-mover': (d) => { moverHist(Number(d.d)); return pintar(); },
+    'h-modo': (d) => { H.modo = d.m; [H.desde, H.hasta] = rangoHist(d.m, H.desde); return pintar(); },
     ver: (d) => Detalle.abrir(Number(d.id), () => { if (tab === 'historial') pintar(); }),
     'mv-agregar': async () => {
       const tipo = $('#mv-tipo', el).value, monto = Number($('#mv-monto', el).value);
@@ -143,8 +161,9 @@ const Ganancias = (() => {
   }
   function onChange(ev) {
     const t = ev.target, c = t.dataset.campo;
-    if (c === 'h-desde') { H.desde = t.value; pintar(); }
-    else if (c === 'h-hasta') { H.hasta = t.value; pintar(); }
+    if ((c === 'h-desde' || c === 'h-hasta') && !t.value) return;
+    if (c === 'h-desde') { H.desde = t.value; H.modo = 'rango'; pintar(); }
+    else if (c === 'h-hasta') { H.hasta = t.value; H.modo = 'rango'; pintar(); }
     else if (c === 'c-hasta') { C.hasta = t.value || hoyISO(); pintar(); }
     else if (c === 'c-nota') C.nota = t.value;
     else if (c === 'p-emp') { P.emp = t.value; P.mes = null; pintar(); }

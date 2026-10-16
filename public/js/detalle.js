@@ -25,7 +25,7 @@ const Detalle = (() => {
         <div><label class="cam">Ficha de este turno</label><textarea id="dt-ficha" rows="2">${h(b.ficha)}</textarea><label class="cam">Notas</label><textarea id="dt-notas" rows="2">${h(b.notas)}</textarea></div></div>`
         : `<div class="mod-info">${d.cliente ? `<p><b>Clienta:</b> ${h(d.cliente.nombre)}</p>` : ''}${d.ficha ? `<p><b>Ficha:</b> ${h(d.ficha)}</p>` : ''}${d.notas ? `<p><b>Notas:</b> ${h(d.notas)}</p>` : ''}</div>`}
       <div class="mod-acc">${edit ? '<button class="btn-verde" id="dt-guardar">Guardar datos</button>' : ''}<button class="btn-oro" id="dt-cerrar">Cerrar</button><span class="sp"></span>
-        ${edit ? '<button class="btn-lnk" id="dt-anular">Anular cobro</button>' : ''}</div></div>`;
+        ${edit ? '<button class="btn-lnk" id="dt-anular">Anular cobro</button>' : ''}${d.anulado && !d.cierre_id ? '<button class="btn-lnk" id="dt-eliminar" style="color:#a33">Eliminar cobro</button>' : ''}</div></div>`;
 
     const combo = edit ? selectorClienta($('#dt-combo', m), { valor: b.cliente }) : null;
     const leer = () => ({ cliente: combo.valor, ficha: $('#dt-ficha', m).value, notas: $('#dt-notas', m).value, fecha: $('#dt-fecha', m).value });
@@ -56,6 +56,10 @@ const Detalle = (() => {
         onCambio?.(); cerrarCapa(m); toast('Cobro anulado');
       }));
     }
+        if (d.anulado && !d.cierre_id) $('#dt-eliminar', m).onclick = (ev) => doble(ev.target, '¿Seguro? Se elimina para siempre', () => guardar(async () => {
+      await api('DELETE', `/api/cobros/${d.id}`);
+      onCambio?.(); cerrarCapa(m); toast('Cobro eliminado');
+    }));
   }
   return { abrir };
 })();

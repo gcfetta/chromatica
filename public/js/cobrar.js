@@ -8,7 +8,7 @@ const Cobrar = (() => {
   const SUBTIT = { 'Mechas': 'Babylights, foilayage, split y más', 'Retoques deco': 'Crecimientos y color después de la deco', 'Coloraciones': 'Raíces, baño de luz, color global' };
 
   function nuevo() {
-    return { servicios: [], ruta: [], metodo: 'efectivo', cuotas: null, sena: false, senaMonto: K?.config.sena_default ?? 10000,
+    return { servicios: [], ruta: [], metodo: 'efectivo', cuotas: null, sena: true, senaMonto: K?.config.sena_default ?? 10000,
       cliente: null, ficha: '', notas: '', fecha: '', calc: null, editLinea: null, error: '', guardando: false,
       b: { emp: null, horas: '', precio: '', editar: false, desc: '', monto: '', aplicarDesc: true } };
   }
@@ -27,7 +27,12 @@ const Cobrar = (() => {
 
   const precioDe = (v, cat) => (S.metodo === 'efectivo' && cat !== 'corte' ? v.efectivo : v.tarjeta);
   const modoDe = (empId, cat) => K.empleados.find((e) => String(e.id) === String(empId))?.pagos[cat]?.modo;
-  const empDefault = (cat) => (cat === 'corte' && K.empleados.length === 1 ? String(K.empleados[0].id) : '');
+  const empDefault = (cat) => {
+    if (cat !== 'corte') return '';
+    const d = K.config.empleado_corte;
+    if (d && K.empleados.some((e) => e.id === d)) return String(d);
+    return K.empleados.length === 1 ? String(K.empleados[0].id) : '';
+  };
 
   // ---------- navegación del selector ----------
   function opServicio(s) {
@@ -39,7 +44,7 @@ const Cobrar = (() => {
     const vs = s.variantes.filter((v) => resto.every((p, i) => v.partes[i] === p));
     if (vs.length === 1) return { tipo: 'hoja', s, v: vs[0] };
     const sig = [...new Set(vs.map((v) => v.partes[resto.length]).filter((x) => x !== undefined))];
-    const niveles = sig.every((x) => ['Plus', 'Premium', 'Básico'].includes(x));
+    const niveles = sig.every((x) => (K.config.niveles || []).includes(x));
     return { tipo: 'opciones', titulo: niveles ? 'Elegí el nivel' : 'Elegí el largo o talle', ops: sig.map((x) => ({ clave: x, t: x })) };
   }
 
@@ -74,10 +79,6 @@ const Cobrar = (() => {
     const migas = S.ruta.length
       ? S.ruta.map((m, i) => `<button data-acc="miga" data-i="${i}">${h(m.label)}</button>`).join(' › ') + ` <button data-acc="reiniciar" style="margin-left:10px;color:var(--sec)">↺ Empezar de nuevo</button>`
       : 'Elegí el primer paso';
-    const pildoras = S.servicios.map((l, i) => {
-      const c = S.calc?.servicios[i];
-      return `<span class="pildora">${h((c?.recorrido || '…').replaceAll(' › ', ' · '))} · ${c ? peso(c.precio_cobrado) : ''}<button data-acc="quitar" data-i="${i}" title="Quitar">×</button></span>`;
-    }).join('');
     let cuerpo = '';
     if (paso.tipo === 'opciones') {
       cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones">${paso.ops.map((o) =>
@@ -86,9 +87,7 @@ const Cobrar = (() => {
     else cuerpo = otroHTML();
 
     el.querySelector('#izq').innerHTML = `
-      <div class="cab"><div><div class="eyebrow">Nuevo cobro</div><h2>Armá el servicio</h2></div>
-        <button class="btn-oro" data-acc="reiniciar">＋ Agregar servicio</button></div>
-      ${pildoras ? `<div class="pildoras">${pildoras}</div>` : ''}
+      <div class="cab"><div><div class="eyebrow">Nuevo cobro</div><h2>Armá el servicio</h2></div></div>
       <div class="migas">${migas}</div>${cuerpo}`;
   }
 
@@ -131,44 +130,50 @@ const Cobrar = (() => {
 
   function renderDer() {
     const c = S.calc;
+    const dto = (c?.servicios || []).filter((x) => !x.editado).reduce((a, x) => a + Math.max(0, x.descuento), 0);
+    const opciones = K.config.cuotas_opciones;
+    const optsEmp = (sel) => `<option value="">Sin asignar</option>${K.empleados.map((e) => `<option value="${e.id}" ${String(e.id) === String(sel ?? '') ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}`;
+    const nomEmp = (id) => K.empleados.find((e) => String(e.id) === String(id))?.nombre || 'Sin asignar';
     const lineas = S.servicios.length ? S.servicios.map((l, i) => {
-      const x = c?.servicios[i];
-      if (!x) return '';
-      const modo = x.pago_modo;
-      const pago = !x.empleado_id ? '' : modo === 'hora'
-        ? (x.horas == null ? `<span class="com">Horas pendientes</span>` : `<span class="com">Pago por horas ${peso(x.pago_monto)} (${x.horas} h)</span>`)
-        : `<span class="com">Comisión ${peso(x.pago_monto)}</span>`;
-      const emp = K.empleados.find((e) => e.id === x.empleado_id);
-      return `<div class="linea"><div class="t"><b>${h(x.recorrido)}</b><span class="p">${peso(x.precio_cobrado)}</span></div>
-        <small>${x.editado ? `<span class="ed">Precio editado · original ${peso(x.precio_lista)}</span> · ` : x.descuento > 0 ? `Lista ${peso(x.precio_lista)} · −${peso(x.descuento)} efectivo · ` : ''}${emp ? h(emp.nombre) + ' · ' : ''}${pago}</small>
-        <div class="mini">${selEmpleado(x.categoria, l.empleado_id == null ? '' : String(l.empleado_id), `l.${i}.emp`)}
-          ${x.empleado_id && modoDe(x.empleado_id, x.categoria) === 'hora' ? `<input type="number" step="0.25" min="0" placeholder="Horas" data-campo="l.${i}.horas" value="${h(l.horas ?? '')}">` : '<span></span>'}</div>
-        ${S.editLinea === i ? `<div class="mini"><input type="number" min="0" data-campo="l.${i}.precio" value="${x.precio_cobrado}" placeholder="Precio final"><button class="btn-oro" data-acc="precio-ok" data-i="${i}">OK</button></div>` : ''}
+      const x = c?.servicios?.[i];
+      const nombre = x?.recorrido || l.descripcion || 'Servicio';
+      const pideHoras = x?.pago_modo === 'hora';
+      const extra = !x ? '' : pideHoras
+        ? (l.horas == null ? 'Faltan cargar las horas' : `${l.horas} hs`)
+        : `Comisión ${peso(x.pago_monto)}`;
+      return `<div class="linea">
+        <div class="t"><b>${h(nombre)}</b><span class="p">${peso(x ? x.precio_cobrado : 0)}</span></div>
+        <small>${h(nomEmp(x ? x.empleado_id : l.empleado_id))}${extra ? ` · <span class="com">${h(extra)}</span>` : ''}${x?.editado ? ` · <span class="ed">precio editado</span>` : ''}</small>
+        <div class="mini" ${pideHoras ? '' : 'style="grid-template-columns:1fr"'}><select data-campo="l.${i}.emp">${optsEmp(x ? x.empleado_id : l.empleado_id)}</select>
+          ${pideHoras ? `<input type="number" step="0.25" min="0" data-campo="l.${i}.horas" value="${l.horas ?? ''}" placeholder="hs">` : ''}</div>
+        ${S.editLinea === i ? `<div class="mini"><input type="number" min="0" data-campo="l.${i}.precio" value="${x ? x.precio_cobrado : ''}"><button class="btn-lnk" data-acc="precio-ok" data-i="${i}">OK</button></div>` : ''}
         <div class="acc"><button class="btn-lnk" data-acc="precio-linea" data-i="${i}">Editar precio</button><button class="btn-lnk" data-acc="quitar" data-i="${i}">Quitar</button></div></div>`;
     }).join('') : `<div class="vacio">Todavía no hay servicios sumados.</div>`;
 
-    const dto = (c?.servicios || []).filter((x) => !x.editado).reduce((a, x) => a + Math.max(0, x.descuento), 0);
-    const opciones = K.config.cuotas_opciones;
+    const scroll = el.querySelector('#der .lineas')?.scrollTop || 0;
     el.querySelector('#der').innerHTML = `
-      <div class="res-cab"><h2>Resumen del cobro</h2><span class="badge">${S.servicios.length ? 'En preparación' : 'Nuevo'}</span></div>
-      <div class="clienta"><span>${S.cliente ? `<b>${h(S.cliente.nombre)}</b>${S.ficha ? ' · con ficha' : ''}` : 'Sin clienta asociada'}</span>
-        <button class="mas" data-acc="clienta" title="Asociar clienta y ficha">＋</button></div>
-      <div class="lineas">${lineas}</div>
-      <div class="metodos"><button class="met ${S.metodo === 'efectivo' ? 'on' : ''}" data-acc="metodo" data-m="efectivo">Efectivo / transferencia</button>
-        <button class="met ${S.metodo === 'tarjeta' ? 'on' : ''}" data-acc="metodo" data-m="tarjeta">Cuotas</button></div>
-      ${S.metodo === 'tarjeta' ? `<select data-campo="cuotas">${opciones.map((n) => `<option value="${n}" ${n === S.cuotas ? 'selected' : ''}>${n === 1 ? '1 cuota' : n + ' cuotas sin interés'}</option>`).join('')}</select>` : ''}
-      <div class="sena"><label><input type="checkbox" data-campo="sena" ${S.sena ? 'checked' : ''}> Tenía seña</label>
-        <input type="number" min="0" data-campo="senaMonto" value="${S.senaMonto}" ${S.sena ? '' : 'disabled'}></div>
-      ${S.error ? `<div class="err">${h(S.error)}</div>` : ''}
-      ${c?.horas_pendientes ? `<div class="aviso">Faltan cargar las horas de ${c.horas_pendientes} servicio(s). Podés guardarlas después, pero no se podrá cerrar la caja hasta completarlas.</div>` : ''}
-      <div class="tot">${dto > 0 ? `<div class="dto"><span>Descuento efectivo ${K.config.descuento_efectivo_pct}%</span><span>− ${peso(dto)}</span></div>` : ''}
-        <div><span>Total del cobro</span><span>${peso(c?.total)}</span></div>
-        <div><span>Seña</span><span>− ${peso(c?.sena)}</span></div>
-        ${c?.pago_empleados ? `<div style="color:var(--sec)"><span>Pago al personal (informativo)</span><span>${peso(c.pago_empleados)}</span></div>` : ''}</div>
-      <div class="saldo"><span>Saldo a cobrar</span><b>${peso(c?.saldo)}</b></div>
-      <button class="btn-verde" data-acc="guardar" ${S.servicios.length && !S.guardando && !S.error ? '' : 'disabled'}>Cobrar y guardar →</button>
-      <div class="fechachica">Fecha del cobro: ${S.fecha && S.fecha !== hoyISO() ? h(S.fecha) : 'Hoy'} <button class="btn-lnk" data-acc="fecha">✎</button>
-        ${S.fecha !== undefined && el.dataset.fecha ? `<input type="date" data-campo="fecha" value="${S.fecha || hoyISO()}" max="${hoyISO()}">` : ''}</div>`;
+      <div class="res-top">
+        <div class="res-cab"><h2>Resumen del cobro</h2><span class="badge">${S.servicios.length ? 'En preparación' : 'Nuevo'}</span></div>
+        <label class="fechachica">Fecha del cobro <input type="date" data-campo="fecha" value="${S.fecha || hoyISO()}" max="${hoyISO()}"></label>
+        <div class="clienta"><span>${S.cliente ? `<b>${h(S.cliente.nombre)}</b>${S.cliente.nuevo ? ' (nueva)' : ''}${S.ficha ? ' · con ficha' : ''}` : 'Sin clienta asociada'}</span>
+          <button class="mas" data-acc="clienta" title="Asociar clienta y ficha">＋</button></div>
+        <div class="metodos"><button class="met ${S.metodo === 'efectivo' ? 'on' : ''}" data-acc="metodo" data-m="efectivo">Efectivo / transferencia</button>
+          <button class="met ${S.metodo === 'tarjeta' ? 'on' : ''}" data-acc="metodo" data-m="tarjeta">Cuotas</button></div>
+        ${S.metodo === 'tarjeta' ? `<select data-campo="cuotas">${opciones.map((n) => `<option value="${n}" ${n === S.cuotas ? 'selected' : ''}>${n === 1 ? '1 cuota' : n + ' cuotas sin interés'}</option>`).join('')}</select>` : ''}
+        <div class="sena"><label><input type="checkbox" data-campo="sena" ${S.sena ? 'checked' : ''}> Tenía seña</label>
+          <input type="number" min="0" data-campo="senaMonto" value="${S.senaMonto}" ${S.sena ? '' : 'disabled'}></div>
+        ${S.error ? `<div class="err">${h(S.error)}</div>` : ''}
+        ${c?.horas_pendientes ? `<div class="aviso">Faltan cargar las horas de ${c.horas_pendientes} servicio(s). Podés guardarlas después, pero no se podrá cerrar la caja hasta completarlas.</div>` : ''}
+        <div class="tot">${dto > 0 ? `<div class="dto"><span>Descuento efectivo ${K.config.descuento_efectivo_pct}%</span><span>− ${peso(dto)}</span></div>` : ''}
+          <div><span>Total del cobro</span><span>${peso(c?.total)}</span></div>
+          <div><span>Seña</span><span>− ${peso(c?.sena)}</span></div>
+          ${c?.pago_empleados ? `<div style="color:var(--sec)"><span>Pago al personal (informativo)</span><span>${peso(c.pago_empleados)}</span></div>` : ''}</div>
+        <div class="saldo"><span>Saldo a cobrar</span><b>${peso(c?.saldo)}</b></div>
+        <button class="btn-verde" data-acc="guardar" ${S.servicios.length && !S.guardando && !S.error ? '' : 'disabled'}>Cobrar y guardar →</button>
+      </div>
+      <div class="res-serv">Servicios del cobro${S.servicios.length ? ` (${S.servicios.length})` : ''}</div>
+      <div class="lineas">${lineas}</div>`;
+    const nl = el.querySelector('#der .lineas'); if (nl) nl.scrollTop = scroll;
   }
 
   // ---------- cálculo en el servidor ----------
@@ -210,7 +215,6 @@ const Cobrar = (() => {
       aplicarPrecio(Number(d.i), inp ? inp.value : '');
     },
     metodo: (d) => { S.metodo = d.m; S.cuotas = d.m === 'tarjeta' ? (S.cuotas ?? K.config.cuotas_opciones.at(-1)) : null; renderIzq(); calcular(); },
-    fecha: () => { el.dataset.fecha = el.dataset.fecha ? '' : '1'; renderDer(); },
     clienta: () => abrirClienta(),
     guardar: async () => {
       S.guardando = true; renderDer();
@@ -219,7 +223,7 @@ const Cobrar = (() => {
         if (S.fecha && S.fecha !== hoyISO()) body.fecha = `${S.fecha} 12:00`;
         const d = await api('POST', '/api/cobros', body);
         estadoGuardado(true);
-        S = nuevo(); el.dataset.fecha = '';
+        S = nuevo();
         await calcular(); render();
         toast(`Cobro guardado · ${peso(d.total)}`, { accion: 'Ver detalle', onAccion: () => Detalle.abrir(d.id) });
       } catch (e) {
@@ -249,15 +253,14 @@ const Cobrar = (() => {
       if (k === 'emp') renderIzq();
     } else if (campo.startsWith('l.')) {
       const [, i, k] = campo.split('.'); const l = S.servicios[Number(i)];
-      if (k === 'emp') l.empleado_id = val === '' ? null : Number(val);
-      if (k === 'horas') { if (val === '') delete l.horas; else l.horas = Number(val); 
       if (k === 'precio') return aplicarPrecio(Number(i), val);
-      }
+      if (k === 'emp') l.empleado_id = val === '' ? null : Number(val);
+      if (k === 'horas') { if (val === '') delete l.horas; else l.horas = Number(val); }
       calcular();
-    } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); }
+    } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); }
     else if (campo === 'sena') { S.sena = val; calcular(); }
     else if (campo === 'senaMonto') { S.senaMonto = Number(val) || 0; calcular(); }
-    else if (campo === 'fecha') { S.fecha = val; el.dataset.fecha = ''; renderDer(); }
+    else if (campo === 'fecha') { S.fecha = val; renderDer(); }
   }
   function onInput(ev) {      // texto libre del formulario "Otro": se guarda sin volver a dibujar (no pierde el foco)
     const campo = ev.target.dataset.campo;
@@ -267,15 +270,26 @@ const Cobrar = (() => {
   // ---------- clienta y ficha (panel lateral) ----------
   function abrirClienta() {
     const d = $('#drawer');
-    d.innerHTML = `<div><h2 style="font-size:26px">Clienta y ficha</h2><p class="nota">Es opcional: se puede cobrar sin clienta.</p>
+    d.innerHTML = `<div><h2 style="font-size:26px">Clienta y ficha</h2><p class="nota">Es opcional: se puede cobrar sin clienta. Una clienta nueva se crea recién al tocar «Listo».</p>
       <label class="cam">Clienta</label><div id="cl-combo"></div>
+      <div id="cl-contacto" hidden><label class="cam">Contacto de la nueva clienta (opcional)</label><input type="text" id="cl-cont" placeholder="Teléfono, Instagram…" value="${h(S.cliente?.contacto || '')}"></div>
       <label class="cam">Ficha de este turno (opcional)</label><textarea id="cl-ficha" rows="4">${h(S.ficha)}</textarea>
       <label class="cam">Notas (opcional)</label><textarea id="cl-notas" rows="2">${h(S.notas)}</textarea>
       <div style="margin-top:16px"><button class="btn-verde" id="cl-ok">Listo</button></div></div>`;
-    selectorClienta($('#cl-combo', d), { valor: S.cliente, onCambio: (c) => { S.cliente = c; } });
-    // al cerrar (Listo, tocar afuera o Esc) se conservan la ficha y las notas escritas
-    d.alCerrar = () => { S.ficha = $('#cl-ficha', d).value.trim(); S.notas = $('#cl-notas', d).value.trim(); renderDer(); };
-    $('#cl-ok', d).onclick = () => cerrarCapa(d);
+    const mostrar = (c) => { $('#cl-contacto', d).hidden = !c?.nuevo; };
+    selectorClienta($('#cl-combo', d), { valor: S.cliente, diferir: true, onCambio: (c) => { S.cliente = c; mostrar(c); } });
+    mostrar(S.cliente);
+    // al cerrar se conservan la ficha y las notas; una clienta nueva sin confirmar con «Listo» no se crea
+    d.alCerrar = () => { S.ficha = $('#cl-ficha', d).value.trim(); S.notas = $('#cl-notas', d).value.trim(); if (S.cliente?.nuevo) S.cliente = null; renderDer(); };
+    $('#cl-ok', d).onclick = async () => {
+      try {
+        if (S.cliente?.nuevo) {
+          const c = await api('POST', '/api/clientes', { nombre: S.cliente.nombre, contacto: $('#cl-cont', d).value.trim() || null });
+          S.cliente = { id: c.id, nombre: c.nombre };
+        }
+        cerrarCapa(d);
+      } catch (e) { toast(e.message, { error: true }); }
+    };
     d.hidden = false;
   }
 

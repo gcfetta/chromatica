@@ -1,11 +1,12 @@
 // Pantalla PERSONAL (versión funcional simple): empleados y cómo se les paga por categoría.
 const Personal = (() => {
   const CATS = [['corte', 'Corte'], ['color', 'Color'], ['nutri', 'Nutri'], ['otro', 'Otro']];
-  let el, lista = [];
+  let el, lista = [], defCorte = null;
 
   async function montar(contenedor) {
     el = contenedor;
     lista = await api('GET', '/api/empleados');
+    defCorte = (await api('GET', '/api/config')).empleado_corte;
     pintar();
     el.onclick = onClick;
   }
@@ -14,6 +15,7 @@ const Personal = (() => {
     return `<div class="tarjeta" data-id="${e.id}">
       <label class="cam" style="margin-top:0">Nombre</label><input type="text" data-f="nombre" value="${h(e.nombre)}">
       <label style="display:block;margin:10px 0;font-size:13px"><input type="checkbox" data-f="activo" ${e.activo ? 'checked' : ''}> Activo</label>
+            <label style="display:block;margin:0 0 10px;font-size:13px"><input type="checkbox" data-f="corte-def" ${e.id === defCorte ? 'checked' : ''}> Cortes por defecto a esta persona</label>
       <label class="cam">Cómo se le paga</label>
       ${CATS.map(([c, nombre]) => `<div class="pago-fila"><span>${nombre}</span>
         <select data-f="modo-${c}"><option value="porcentaje" ${e.pagos[c].modo === 'porcentaje' ? 'selected' : ''}>Porcentaje (%)</option><option value="hora" ${e.pagos[c].modo === 'hora' ? 'selected' : ''}>Por hora ($)</option></select>
@@ -42,6 +44,9 @@ const Personal = (() => {
         const pagos = {};
         for (const [c] of CATS) pagos[c] = { modo: q('modo-' + c).value, valor: Number(q('valor-' + c).value) };
         await api('PUT', `/api/empleados/${t.dataset.id}`, { nombre: q('nombre').value, activo: q('activo').checked, pagos });
+                const cd = q('corte-def');
+        if (cd.checked) { await api('PUT', '/api/config/empleado-corte', { empleado_id: Number(t.dataset.id) }); defCorte = Number(t.dataset.id); el.querySelectorAll('[data-f="corte-def"]').forEach((x) => { if (x !== cd) x.checked = false; }); }
+        else if (defCorte === Number(t.dataset.id)) { await api('PUT', '/api/config/empleado-corte', { empleado_id: null }); defCorte = null; }
         estadoGuardado(true); toast('Cambios guardados');
       }
     } catch (e) { estadoGuardado(false); toast(e.message, { error: true }); }

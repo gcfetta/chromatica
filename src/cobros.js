@@ -16,8 +16,12 @@ function empleadoDeLinea(linea, categoria) {
   let id = linea.empleado_id;
   // cortes: por defecto, el único empleado activo; el resto queda sin asignar
   if (id === undefined && categoria === 'corte') {
-    const activos = db.prepare('SELECT id FROM empleado WHERE activo = 1').all();
-    id = activos.length === 1 ? activos[0].id : null;
+    const def = Number(cfg('empleado_corte'));
+    if (def && db.prepare('SELECT 1 FROM empleado WHERE id = ? AND activo = 1').get(def)) id = def;
+    else {
+      const activos = db.prepare('SELECT id FROM empleado WHERE activo = 1').all();
+      id = activos.length === 1 ? activos[0].id : null;
+    }
   }
   if (id == null) return null;
   if (!db.prepare('SELECT 1 FROM empleado WHERE id = ? AND activo = 1').get(Number(id)))
@@ -229,6 +233,21 @@ router.post('/:id/anular', (req, res) => {
     audit('turno', id, 'anular', { motivo: req.body?.motivo ?? null });
   })();
   res.json(detalle(id));
+});
+
+// Un cobro anulado se puede eliminar definitivamente (uno vigente primero se anula)
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const t = db.prepare('SELECT * FROM turno WHERE id = ?').get(id);
+  if (!t) throw new ApiError(404, 'Cobro inexistente');
+  if (!t.anulado) throw new ApiError(409, 'Solo se pueden eliminar cobros anulados');
+  if (t.cierre_id) throw new ApiError(409, 'El cobro está en un cierre de caja');
+  db.transaction(() => {
+    db.prepare('DELETE FROM turno_servicio WHERE turno_id = ?').run(id);
+    db.prepare('DELETE FROM turno WHERE id = ?').run(id);
+    audit('turno', id, 'eliminar', { total: t.total, fecha: t.fecha, cliente_id: t.cliente_id });
+  })();
+  res.json({ ok: true });
 });
 
 // Completar o corregir las horas (color) o el empleado de un servicio ya cobrado
