@@ -1,10 +1,14 @@
-// Pantalla GANANCIAS: resumen, historial, movimientos y cierre de caja (pestañas).
+// Pantalla GANANCIAS: resumen por período, historial, movimientos, pagos al personal y cierre de caja.
 const Ganancias = (() => {
-  const TABS = [['resumen', 'Resumen'], ['historial', 'Historial'], ['movimientos', 'Movimientos'], ['cierre', 'Cierre de caja']];
+  const TABS = [['resumen', 'Resumen'], ['historial', 'Historial'], ['movimientos', 'Movimientos'], ['pagos', 'Pagos al personal'], ['cierre', 'Cierre de caja']];
   const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
   let el, tab = 'resumen';
+  const R = { tipo: 'semana', offset: 0 };      // período del resumen
   const H = { desde: '', hasta: '' };           // rango del historial
-  const C = { hasta: '', nota: '' };            // cierre
+  const P = { mes: null, emp: '' };             // pagos al personal
+  const C = { hasta: '', nota: '', i: 0 };      // cierre de caja (i = mes visible de los cierres anteriores)
+  const nombreMes = (ym) => `${MESES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+  const chev = (acc, extra, simbolo, off) => `<button class="chev" data-acc="${acc}" ${extra} ${off ? 'disabled' : ''}>${simbolo}</button>`;
 
   function semanaActual() {
     const d = new Date(), lun = new Date(d); lun.setDate(d.getDate() - ((d.getDay() + 6) % 7));
@@ -23,21 +27,26 @@ const Ganancias = (() => {
 
   async function pintar() {
     el.innerHTML = `<h1>Ganancias</h1><div class="tabs">${TABS.map(([k, t]) => `<button class="tab ${k === tab ? 'on' : ''}" data-acc="tab" data-k="${k}">${t}</button>`).join('')}</div><div id="g-cuerpo"></div>`;
-    const c = $('#g-cuerpo', el);
-    try { c.innerHTML = await VISTA[tab](); } catch (e) { if (e.status !== 401) toast(e.message, { error: true }); }
+    try { $('#g-cuerpo', el).innerHTML = await VISTA[tab](); } catch (e) { if (e.status !== 401) toast(e.message, { error: true }); }
   }
 
   // ---------- Resumen ----------
   async function resumen() {
-    const r = await api('GET', '/api/ganancias/resumen');
-    const tarjeta = (t, p) => `<div class="panel kpi"><div class="eyebrow">${t}</div><div class="grande">${peso(p.ganancia)}</div><small>ganancia de la pelu</small>
-      <div class="tot"><div><span>Cobrado (${p.cobros})</span><span>${peso(p.total)}</span></div><div><span>Pagos al personal</span><span>− ${peso(p.pagos_empleados)}</span></div><div><span>Gastos</span><span>− ${peso(p.gastos)}</span></div></div></div>`;
+    const r = await api('GET', `/api/ganancias/resumen?tipo=${R.tipo}&offset=${R.offset}`);
+    const p = r.periodo;
+    const etiqueta = p.tipo === 'mes' ? nombreMes(p.desde) : `${fdia(p.desde)} al ${fdia(p.hasta)}`;
+    const actual = p.offset === 0 ? (p.tipo === 'mes' ? 'Este mes' : 'Esta semana') : p.offset === -1 ? (p.tipo === 'mes' ? 'Mes pasado' : 'Semana pasada') : '';
     const max = Math.max(1, ...r.dias.map((d) => d.total));
+    const largo = r.dias.length > 8;
     return `${r.horas_pendientes ? `<div class="aviso">Hay ${r.horas_pendientes} servicio(s) de color con horas pendientes. <button class="btn-lnk" data-acc="tab" data-k="historial">Completarlas en el historial</button></div>` : ''}
-      <div class="kpis">${tarjeta('Esta semana', r.semana)}${tarjeta('Este mes', r.mes)}</div>
-      <div class="kpis"><div class="panel"><div class="eyebrow">A pagar al personal</div>
-        ${r.a_pagar.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">A pagar</th></tr>${r.a_pagar.map((e) => `<tr><td>${h(e.empleado)}</td><td class="r">${peso(e.pagos)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table><p class="nota">Desde el último cierre de caja.</p>` : '<p class="nota">Todavía no hay empleados cargados.</p>'}</div>
-        <div class="panel"><div class="eyebrow">Cobros por día · semana</div><div class="barras">${r.dias.map((d, i) => `<div class="barra"><span class="v">${d.total ? peso(d.total).replace('$ ', '') : ''}</span><i style="height:${Math.round(d.total / max * 100)}%"></i><span>${DIAS[i]}</span></div>`).join('')}</div></div></div>`;
+      <div class="per-nav"><div class="seg"><button class="${p.tipo === 'semana' ? 'on' : ''}" data-acc="tipo" data-t="semana">Semana</button><button class="${p.tipo === 'mes' ? 'on' : ''}" data-acc="tipo" data-t="mes">Mes</button></div>
+        ${chev('per', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${actual ? `<small>${actual}</small>` : ''}</div>${chev('per', 'data-d="1"', '›', p.offset >= 0)}
+        ${p.offset < 0 ? '<button class="btn-lnk" data-acc="per-hoy">Volver a hoy</button>' : ''}</div>
+      <div class="kpis"><div class="panel kpi"><div class="eyebrow">Ganancia de la pelu</div><div class="grande">${peso(p.ganancia)}</div>
+          <div class="tot"><div><span>Cobrado (${p.cobros} cobros)</span><span>${peso(p.total)}</span></div><div><span>Pagos al personal</span><span>− ${peso(p.pagos_empleados)}</span></div><div><span>Gastos</span><span>− ${peso(p.gastos)}</span></div></div></div>
+        <div class="panel"><div class="eyebrow">Cobros por día</div><div class="barras ${largo ? 'mes' : ''}">${r.dias.map((d, i) => `<div class="barra" title="${fdia(d.dia)}: ${peso(d.total)}">${largo ? '' : `<span class="v">${d.total ? peso(d.total).replace('$ ', '') : ''}</span>`}<i style="height:${Math.round(d.total / max * 100)}%"></i><span>${largo ? Number(d.dia.slice(8)) : DIAS[i]}</span></div>`).join('')}</div></div></div>
+      <div class="panel"><div class="eyebrow">A pagar al personal (desde el último cierre de caja)</div>
+        ${r.a_pagar.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">A pagar</th></tr>${r.a_pagar.map((e) => `<tr><td>${h(e.empleado)}</td><td class="r">${peso(e.pagos)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay empleados cargados.</p>'}</div>`;
   }
 
   // ---------- Historial ----------
@@ -66,12 +75,29 @@ const Ganancias = (() => {
       <p class="nota">Solo se muestran los movimientos sin cerrar.</p>` : '<p class="nota">No hay movimientos sin cerrar.</p>'}`;
   }
 
+  // ---------- Pagos al personal (historial, sale de los cierres de caja) ----------
+  async function pagos() {
+    const [emps, r] = await Promise.all([api('GET', '/api/empleados'), api('GET', `/api/cierres/pagos?${P.mes ? `mes=${P.mes}&` : ''}empleado_id=${P.emp}`)]);
+    P.mes = r.mes;
+    const i = r.meses.indexOf(r.mes);
+    return `<div class="per-nav"><label class="filtro" style="margin:0">Empleado <select data-campo="p-emp"><option value="">Todos</option>${emps.map((e) => `<option value="${e.id}" ${String(e.id) === String(P.emp) ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}</select></label>
+        <span class="sp"></span>${chev('pmes', `data-m="${r.meses[i + 1] || ''}"`, '‹', !r.meses[i + 1])}<div class="per-lbl"><b>${r.mes ? nombreMes(r.mes) : 'Sin pagos'}</b></div>${chev('pmes', `data-m="${i > 0 ? r.meses[i - 1] : ''}"`, '›', !(i > 0))}</div>
+      ${r.filas.length ? `<table class="tabla"><tr><th>Cierre</th><th>Empleado</th><th class="r">Por %</th><th class="r">Por horas</th><th class="r">Total</th><th class="r">Adelantos</th><th class="r">Pagado</th></tr>
+        ${r.filas.map((f) => `<tr><td>${fdia(f.hasta)}</td><td>${h(f.empleado)}</td><td class="r">${peso(f.por_porcentaje)}</td><td class="r">${peso(f.por_horas)}</td><td class="r">${peso(f.pago_total)}</td><td class="r">− ${peso(f.adelantos)}</td><td class="r"><b>${peso(f.neto)}</b></td></tr>`).join('')}</table>
+        <div class="panel" style="margin-top:14px"><div class="eyebrow">Total del mes por empleado</div><table class="tabla">${r.totales.map((t) => `<tr><td>${h(t.empleado)}</td><td class="r">${peso(t.pago_total)}</td><td class="r">− ${peso(t.adelantos)}</td><td class="r"><b>${peso(t.neto)}</b></td></tr>`).join('')}</table></div>`
+        : '<p class="nota" style="margin-top:16px">Todavía no hay pagos registrados: cada vez que cerrás la caja queda anotado lo que se le pagó a cada empleado.</p>'}`;
+  }
+
   // ---------- Cierre de caja ----------
   async function cierre() {
     const [p, lista] = await Promise.all([api('GET', `/api/cierres/previa?hasta=${C.hasta}`), api('GET', '/api/cierres')]);
     const vivos = lista.filter((c) => !c.anulado);
     const vacio = !p.cantidad_cobros && !p.movimientos, bloqueado = p.pendientes.length > 0;
-    return `<div class="panel"><div class="cab"><div><div class="eyebrow">Vista previa</div><h2>Cerrar hasta el</h2></div>
+    const grupos = [];                                   // cierres anteriores agrupados por mes
+    for (const c of vivos) { const ym = c.hasta.slice(0, 7); let g = grupos.find((x) => x.ym === ym); if (!g) grupos.push((g = { ym, items: [] })); g.items.push(c); }
+    C.i = Math.max(0, Math.min(C.i, grupos.length - 1));
+    const g = grupos[C.i];
+    return `<div class="cierre-grid"><div class="panel"><div class="cab"><div><div class="eyebrow">Vista previa</div><h2>Cerrar hasta el</h2></div>
         <input type="date" data-campo="c-hasta" value="${C.hasta}" max="${hoyISO()}" style="width:auto"></div>
       ${bloqueado ? `<div class="err">Faltan las horas de ${p.pendientes.length} servicio(s) de color. <button class="btn-lnk" data-acc="tab" data-k="historial">Completarlas en el historial</button></div>` : ''}
       <div class="tot" style="margin-top:14px"><div><span>Cobros incluidos</span><span>${p.cantidad_cobros}</span></div><div><span>Total cobrado</span><span>${peso(p.total_cobrado)}</span></div>
@@ -80,14 +106,21 @@ const Ganancias = (() => {
       ${p.por_empleado.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">Neto a pagar</th></tr>${p.por_empleado.map((e) => `<tr><td>${h(e.empleado)}</td><td class="r">${peso(e.pago_total)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : ''}
       <label class="cam">Nota (opcional)</label><input type="text" data-campo="c-nota" value="${h(C.nota)}">
       <div style="margin-top:14px"><button class="btn-verde" data-acc="cerrar-caja" ${vacio || bloqueado ? 'disabled' : ''}>Cerrar caja</button></div></div>
-      ${vivos.length ? `<h3 style="margin:22px 0 8px">Cierres anteriores</h3><table class="tabla"><tr><th>Período</th><th class="r">Cobrado</th><th class="r">Ganancia</th><th></th></tr>${vivos.map((c, i) => `<tr><td>${h((c.desde || '').slice(0, 10))} → ${h(c.hasta.slice(0, 10))}</td><td class="r">${peso(c.total_cobrado)}</td><td class="r">${peso(c.ganancia_local)}</td><td>${i === 0 ? `<button class="btn-lnk" data-acc="anular-cierre" data-id="${c.id}">Anular último cierre</button>` : ''}</td></tr>`).join('')}</table>` : ''}`;
+      <div class="panel"><div class="hist-cab"><h3>Cierres anteriores</h3>${g ? `<div class="pager">${chev('cmes', 'data-d="1"', '‹', C.i >= grupos.length - 1)}<span><b>${nombreMes(g.ym)}</b></span>${chev('cmes', 'data-d="-1"', '›', C.i <= 0)}</div>` : ''}</div>
+        ${g ? `<p class="nota">${g.items.length} ${g.items.length === 1 ? 'cierre' : 'cierres'} · cobrado ${peso(g.items.reduce((a, c) => a + c.total_cobrado, 0))} · ganancia ${peso(g.items.reduce((a, c) => a + c.ganancia_local, 0))}</p>
+          <table class="tabla"><tr><th>Período</th><th class="r">Cobrado</th><th class="r">Ganancia</th><th></th></tr>${g.items.map((c) => `<tr><td>${fdia(c.desde || '')}${c.desde ? ' → ' : 'hasta '}${fdia(c.hasta)}</td><td class="r">${peso(c.total_cobrado)}</td><td class="r">${peso(c.ganancia_local)}</td><td>${c.id === vivos[0].id ? `<button class="btn-lnk" data-acc="anular-cierre" data-id="${c.id}">Anular último cierre</button>` : ''}</td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay cierres.</p>'}</div></div>`;
   }
 
-  const VISTA = { resumen, historial, movimientos, cierre };
+  const VISTA = { resumen, historial, movimientos, pagos, cierre };
 
   // ---------- eventos ----------
   const ACC = {
     tab: (d) => { tab = d.k; return pintar(); },
+    tipo: (d) => { R.tipo = d.t; R.offset = 0; return pintar(); },
+    per: (d) => { R.offset = Math.min(0, R.offset + Number(d.d)); return pintar(); },
+    'per-hoy': () => { R.offset = 0; return pintar(); },
+    pmes: (d) => { if (d.m) { P.mes = d.m; return pintar(); } },
+    cmes: (d) => { C.i += Number(d.d); return pintar(); },
     'esta-semana': () => { [H.desde, H.hasta] = semanaActual(); return pintar(); },
     ver: (d) => Detalle.abrir(Number(d.id), () => { if (tab === 'historial') pintar(); }),
     'mv-agregar': async () => {
@@ -98,14 +131,14 @@ const Ganancias = (() => {
     },
     'mv-anular': (d, b) => doble(b, '¿Seguro?', async () => { await api('POST', `/api/movimientos/${d.id}/anular`, {}); toast('Movimiento anulado'); await pintar(); }),
     'cerrar-caja': (_d, b) => doble(b, `Confirmar cierre hasta el ${fdia(C.hasta)}`, async () => {
-      await api('POST', '/api/cierres', { hasta: C.hasta, nota: C.nota || null }); C.nota = ''; estadoGuardado(true); toast('Caja cerrada'); await pintar();
+      await api('POST', '/api/cierres', { hasta: C.hasta, nota: C.nota || null }); C.nota = ''; C.i = 0; estadoGuardado(true); toast('Caja cerrada'); await pintar();
     }),
     'anular-cierre': (d, b) => doble(b, '¿Seguro? Los cobros vuelven a quedar abiertos', async () => { await api('POST', `/api/cierres/${d.id}/anular`, {}); toast('Cierre anulado'); await pintar(); }),
   };
 
   async function onClick(ev) {
     const b = ev.target.closest('[data-acc]');
-    if (!b || !ACC[b.dataset.acc]) return;
+    if (!b || b.disabled || !ACC[b.dataset.acc]) return;
     try { await ACC[b.dataset.acc](b.dataset, b); } catch (e) { estadoGuardado(false); toast(e.message, { error: true }); }
   }
   function onChange(ev) {
@@ -114,6 +147,7 @@ const Ganancias = (() => {
     else if (c === 'h-hasta') { H.hasta = t.value; pintar(); }
     else if (c === 'c-hasta') { C.hasta = t.value || hoyISO(); pintar(); }
     else if (c === 'c-nota') C.nota = t.value;
+    else if (c === 'p-emp') { P.emp = t.value; P.mes = null; pintar(); }
     else if (c === 'mv-tipo') $('#mv-emp', el).hidden = t.value !== 'adelanto';
   }
 

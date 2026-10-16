@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node db/seed.js",
+    "limpiar": "node db/limpiar.js",
     "test": "node test/cobros.test.js && node test/cierres.test.js && node test/ganancias.test.js && node test/copias.test.js  && node test/servicios.test.js"
   },
   "dependencies": {

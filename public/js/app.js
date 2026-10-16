@@ -17,7 +17,7 @@ const App = (() => {
 
   async function ir(vista) {
     actual = vista; pintarNav();
-    const v = $('#vista'); v.onclick = v.onchange = v.oninput = null;
+    const v = $('#vista'); v.onclick = v.onchange = v.oninput = null; v.className = 'vista';
     try {
       if (vista === 'cobrar') await Cobrar.montar(v);
       else if (vista === 'servicios') await Servicios.montar(v);
@@ -62,6 +62,9 @@ const App = (() => {
   }
 
   async function iniciar() {
+    ['modal', 'drawer'].forEach((id) => $('#' + id).addEventListener('mousedown', (ev) => { if (ev.target.id === id) cerrarCapa($('#' + id)); }));
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') ['modal', 'drawer'].forEach((id) => { const e = $('#' + id); if (!e.hidden) cerrarCapa(e); }); });
+    
     $('#nav').onclick = (ev) => { const b = ev.target.closest('[data-vista]'); if (b) ir(b.dataset.vista); };
     document.addEventListener('click', async (ev) => {
       if (ev.target.closest('[data-acc="salir"]')) { await api('POST', '/api/auth/logout').catch(() => {}); sesionVencida(); }

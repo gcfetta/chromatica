@@ -24,9 +24,9 @@ const Copias = (() => {
           <div class="fila-sync"><input type="text" id="cp-carpeta" placeholder="Carpeta sincronizada" value="${h(d.carpeta_sync || '')}"><button class="btn-oro" data-acc="carpeta">Guardar</button></div>
           <p class="nota" style="margin-top:8px">Elegí una carpeta dentro de Google Drive para escritorio o iCloud Drive; ellos la suben a la nube. Dejalo vacío para desactivar.</p></div>
       </div>
-      <div class="panel" style="background:#fff;max-width:1000px;margin-bottom:18px"><div class="eyebrow">Exportar para leer en Excel</div>
+      <div class="panel" style="background:#fff;margin-bottom:18px"><div class="eyebrow">Exportar para leer en Excel</div>
         <div class="exportar"><a href="/api/copias/exportar/cobros">Cobros (CSV)</a><a href="/api/copias/exportar/clientas">Clientas (CSV)</a><a href="/api/copias/exportar/movimientos">Movimientos (CSV)</a><a href="/api/copias/exportar/auditoria">Historial de cambios (CSV)</a></div></div>
-      <div class="panel" style="background:#fff;max-width:1000px"><div class="eyebrow">Copias guardadas</div>
+      <div class="panel" style="background:#fff"><div class="eyebrow">Copias guardadas</div>
         ${d.copias.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th class="r">Tamaño</th><th></th></tr>${d.copias.map((c) => `<tr><td>${fecha(c.fecha)}</td><td>${MOT[c.motivo]}</td><td class="r">${Math.max(1, Math.round(c.tam / 1024))} KB</td>
           <td class="r"><button class="btn-lnk" data-acc="restaurar" data-n="${h(c.nombre)}">Restaurar</button></td></tr>`).join('')}</table>
         <p class="nota">Al restaurar, antes se guarda una copia del estado actual (tipo "Antes de restaurar").</p>` : '<p class="nota">No hay copias todavía.</p>'}</div>`;

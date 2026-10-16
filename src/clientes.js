@@ -7,8 +7,9 @@ const CAMPOS = ['nombre', 'contacto', 'ficha', 'observacion', 'notas_importantes
 
 router.get('/', (req, res) => {
   const q = `%${(req.query.q || '').trim()}%`;
+  const limite = Math.min(Math.max(Number(req.query.limite) || 200, 1), 200);
   res.json(db.prepare(`SELECT id, nombre, contacto, ficha, observacion, notas_importantes, activo
-    FROM cliente WHERE activo = 1 AND nombre LIKE ? ORDER BY nombre LIMIT 50`).all(q));
+    FROM cliente WHERE activo = 1 AND (nombre LIKE ? OR IFNULL(contacto, '') LIKE ?) ORDER BY nombre LIMIT ?`).all(q, q, limite));
 });
 
 router.get('/:id', (req, res) => {

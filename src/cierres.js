@@ -56,6 +56,25 @@ const resolverHasta = (v) => (v ? normalizarFecha(v, true) : ahora());
 // Vista previa: no guarda nada
 router.get('/previa', (req, res) => res.json(calcular(resolverHasta(req.query.hasta))));
 
+// Historial de pagos al personal: lo que quedó liquidado en cada cierre de caja (no anulado)
+router.get('/pagos', (req, res) => {
+  const emp = req.query.empleado_id ? Number(req.query.empleado_id) : null;
+  const base = `FROM cierre_empleado ce JOIN cierre c ON c.id = ce.cierre_id JOIN empleado e ON e.id = ce.empleado_id
+    WHERE c.anulado = 0 ${emp ? 'AND ce.empleado_id = ?' : ''}`;
+  const args = emp ? [emp] : [];
+  const meses = db.prepare(`SELECT DISTINCT substr(c.hasta, 1, 7) AS mes ${base} ORDER BY mes DESC`).all(...args).map((m) => m.mes);
+  const mes = /^\d{4}-\d{2}$/.test(req.query.mes || '') ? req.query.mes : meses[0] || null;
+  const filas = mes ? db.prepare(`SELECT c.id AS cierre_id, c.hasta, e.id AS empleado_id, e.nombre AS empleado, ce.por_porcentaje, ce.por_horas,
+      ce.pago_total, ce.adelantos, ce.neto ${base} AND substr(c.hasta, 1, 7) = ? ORDER BY c.hasta DESC, e.nombre`).all(...args, mes) : [];
+  const totales = [];
+  for (const f of filas) {
+    let t = totales.find((x) => x.empleado_id === f.empleado_id);
+    if (!t) totales.push((t = { empleado_id: f.empleado_id, empleado: f.empleado, pago_total: 0, adelantos: 0, neto: 0 }));
+    t.pago_total += f.pago_total; t.adelantos += f.adelantos; t.neto += f.neto;
+  }
+  res.json({ meses, mes, filas, totales });
+});
+
 router.get('/', (_req, res) => {
   res.json(db.prepare('SELECT * FROM cierre ORDER BY id DESC').all());
 });

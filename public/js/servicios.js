@@ -2,6 +2,7 @@
 const Servicios = (() => {
   const ESTRELLAS = { 'Básico': 1, Plus: 2, Premium: 3 };
   const ORDEN = ['Cortes', 'Mechas', 'Retoques deco', 'Coloraciones', 'Tratamientos'];
+  const GRUPOS_CAT = { color: ['Mechas', 'Retoques deco', 'Coloraciones'], nutri: ['Tratamientos'], corte: ['Cortes'] };
   let el, datos = [], filtro = 'Todos', editar = false;
   const A = { abierto: false, pct: '', grupo: 'todos', red: 500, prev: null };
 
@@ -34,7 +35,8 @@ const Servicios = (() => {
       <span>${editar ? `<input type="number" min="1" data-v="${v.variante_id}" value="${v.precio_tarjeta}">` : `<span class="p">${peso(v.precio_tarjeta)}</span>`}
       ${s.categoria === 'corte' ? '' : `<small>Efectivo ${peso(v.precio_efectivo)}</small>`}</span></div>`;
     return `<div class="srv"><h3>${h(s.nombre)}${s.subgrupo ? `<span class="tagg">${h(s.subgrupo)}</span>` : ''}</h3>${s.duracion ? `<div class="dur">Duración promedio: ${h(s.duracion)}</div>` : ''}
-      ${niveles.map((n) => `${n.nivel ? `<div class="nivel">${'★'.repeat(ESTRELLAS[n.nivel])} ${h(n.nivel)}</div>` : ''}${n.filas.map(fila).join('')}`).join('')}</div>`;
+    ${editar ? `<button class="btn-lnk" style="margin-top:8px" data-acc="var-nueva" data-s="${s.id}">＋ Agregar opción</button>` : ''}  
+    ${niveles.map((n) => `${n.nivel ? `<div class="nivel">${'★'.repeat(ESTRELLAS[n.nivel])} ${h(n.nivel)}</div>` : ''}${n.filas.map(fila).join('')}`).join('')}</div>`;
   }
 
   function panelAct() {
@@ -53,7 +55,7 @@ const Servicios = (() => {
     const lista = datos.filter((s) => filtro === 'Todos' || s.grupo === filtro);
     el.innerHTML = `<h1>Servicios y precios</h1>
       <div class="srv-barra">${['Todos', ...grupos()].map((g) => `<button class="chip ${g === filtro ? 'on' : ''}" data-acc="filtro" data-g="${h(g)}">${h(g)}</button>`).join('')}<span class="sp"></span>
-        <button class="btn-oro" data-acc="editar">${editar ? 'Terminar edición' : 'Editar precios'}</button><button class="btn-oro" data-acc="abrir-act">Actualizar precios %</button></div>
+        <button class="btn-oro" data-acc="nuevo">＋ Nuevo servicio</button><button class="btn-oro" data-acc="editar">${editar ? 'Terminar edición' : 'Editar precios'}</button><button class="btn-oro" data-acc="abrir-act">Actualizar precios %</button></div>
       ${panelAct()}<p class="nota" style="margin-bottom:12px">${editar ? 'Escribí el precio de lista (tarjeta o cuotas); el de efectivo se calcula solo. Los cortes tienen un único precio.' : 'Precio grande: tarjeta o cuotas. Efectivo y transferencia, con descuento.'}</p>
       <div class="srv-grid">${lista.map(tarjeta).join('')}</div>`;
   }
@@ -64,6 +66,8 @@ const Servicios = (() => {
     try {
       if (a === 'filtro') { filtro = b.dataset.g; pintar(); }
       else if (a === 'editar') { editar = !editar; pintar(); }
+      else if (a === 'nuevo') formNuevo();
+      else if (a === 'var-nueva') formOpcion(Number(b.dataset.s));
       else if (a === 'abrir-act') { A.abierto = !A.abierto; A.prev = null; pintar(); }
       else if (a === 'previa') {
         A.prev = await api('POST', '/api/servicios/actualizar-precios', { porcentaje: Number(A.pct), grupo: A.grupo, redondeo: A.red });
@@ -75,6 +79,53 @@ const Servicios = (() => {
         } catch (e) { toast(e.message, { error: true }); }
       });
     } catch (e) { toast(e.message, { error: true }); }
+  }
+
+  function filaVar() { return '<div class="var-fila"><input type="text" placeholder="Opción (ej. Plus, Largo, Único)" data-e><input type="number" min="1" placeholder="Precio" data-p><label class="desde"><input type="checkbox" data-d> desde</label><button type="button" class="btn-lnk" data-x>Quitar</button></div>'; }
+
+  function formNuevo() {
+    const m = $('#modal');
+    m.innerHTML = `<div class="ancho"><h2 style="font-size:26px">Nuevo servicio</h2>
+      <div class="mod-grid"><div><label class="cam">Nombre</label><input id="ns-nombre" type="text"></div>
+        <div><label class="cam">Tipo</label><select id="ns-cat"><option value="color">Color</option><option value="nutri">Nutri / tratamiento</option><option value="corte">Corte</option></select></div>
+        <div><label class="cam">Grupo</label><select id="ns-grupo"></select></div>
+        <div id="ns-sub-box" hidden><label class="cam">Corto o largo</label><select id="ns-sub"><option>Corto</option><option>Largo</option></select></div>
+        <div id="ns-dur-box"><label class="cam">Duración promedio (opcional)</label><input id="ns-dur" type="text" placeholder="Ej. 3 a 5 hs"></div></div>
+      <label class="cam">Opciones y precios (precio de lista: tarjeta o cuotas)</label><div id="ns-vars">${filaVar()}</div>
+      <button type="button" class="btn-lnk" id="ns-mas">＋ Agregar otra opción</button>
+      <div class="mod-acc"><button class="btn-verde" id="ns-guardar">Guardar servicio</button><button class="btn-oro" id="ns-cancelar">Cancelar</button></div></div>`;
+    const cat = () => $('#ns-cat', m).value;
+    const refrescar = () => {
+      $('#ns-grupo', m).innerHTML = GRUPOS_CAT[cat()].map((g) => `<option>${h(g)}</option>`).join('');
+      $('#ns-sub-box', m).hidden = cat() !== 'corte'; $('#ns-dur-box', m).hidden = cat() === 'corte';
+    };
+    refrescar();
+    $('#ns-cat', m).onchange = refrescar;
+    $('#ns-mas', m).onclick = () => $('#ns-vars', m).insertAdjacentHTML('beforeend', filaVar());
+    $('#ns-vars', m).onclick = (ev) => { if (ev.target.dataset.x !== undefined && $('#ns-vars', m).children.length > 1) ev.target.closest('.var-fila').remove(); };
+    $('#ns-cancelar', m).onclick = () => cerrarCapa(m);
+    $('#ns-guardar', m).onclick = async () => {
+      try {
+        const variantes = [...m.querySelectorAll('.var-fila')].map((f) => ({ etiqueta: f.querySelector('[data-e]').value.trim() || 'Único', precio: Number(f.querySelector('[data-p]').value), desde: f.querySelector('[data-d]').checked }));
+        await api('POST', '/api/servicios', { nombre: $('#ns-nombre', m).value, categoria: cat(), grupo: $('#ns-grupo', m).value, subgrupo: cat() === 'corte' ? $('#ns-sub', m).value : null, duracion_texto: $('#ns-dur', m).value, variantes });
+        cerrarCapa(m); await cargar(); pintar(); estadoGuardado(true); toast('Servicio agregado');
+      } catch (e) { toast(e.message, { error: true }); }
+    };
+    m.hidden = false;
+  }
+
+  function formOpcion(sid) {
+    const s = datos.find((x) => x.id === sid), m = $('#modal');
+    m.innerHTML = `<div class="ancho" style="width:min(460px,92vw)"><h2 style="font-size:24px">Nueva opción</h2><p class="nota">${h(s.nombre)}</p>
+      <label class="cam">Nombre de la opción</label><input id="no-e" type="text" placeholder="Ej. Plus · Hasta media espalda">
+      <label class="cam">Precio de lista</label><input id="no-p" type="number" min="1">
+      <div class="mod-acc"><button class="btn-verde" id="no-guardar">Guardar</button><button class="btn-oro" id="no-cancelar">Cancelar</button></div></div>`;
+    $('#no-cancelar', m).onclick = () => cerrarCapa(m);
+    $('#no-guardar', m).onclick = async () => {
+      try { await api('POST', `/api/servicios/${sid}/variantes`, { etiqueta: $('#no-e', m).value, precio: Number($('#no-p', m).value) }); cerrarCapa(m); await cargar(); pintar(); estadoGuardado(true); toast('Opción agregada'); }
+      catch (e) { toast(e.message, { error: true }); }
+    };
+    m.hidden = false;
   }
 
   async function onChange(ev) {

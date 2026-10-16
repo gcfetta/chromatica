@@ -19,6 +19,48 @@ router.put('/variantes/:id', (req, res) => {
   res.json({ id: v.id, precio_tarjeta: precio, precio_efectivo: efectivo });
 });
 
+// Nuevo servicio con sus variantes: { nombre, categoria, grupo, subgrupo?, duracion_texto?, variantes: [{ etiqueta?, precio, desde? }] }
+router.post('/', (req, res) => {
+  const b = req.body || {};
+  const nombre = String(b.nombre || '').trim();
+  if (!nombre) throw new ApiError(400, 'Falta el nombre del servicio');
+  if (!['corte', 'color', 'nutri'].includes(b.categoria)) throw new ApiError(400, 'Categoría inválida');
+  const grupo = String(b.grupo || '').trim();
+  if (!grupo) throw new ApiError(400, 'Falta el grupo');
+  const subgrupo = b.categoria === 'corte' ? String(b.subgrupo || '') : null;
+  if (b.categoria === 'corte' && !['Corto', 'Largo'].includes(subgrupo)) throw new ApiError(400, 'Los cortes son Corto o Largo');
+  const vars = Array.isArray(b.variantes) ? b.variantes : [];
+  if (!vars.length) throw new ApiError(400, 'Cargá al menos un precio');
+  const etiquetas = vars.map((v) => String(v.etiqueta || 'Único').trim() || 'Único');
+  if (new Set(etiquetas).size !== etiquetas.length) throw new ApiError(400, 'Hay opciones repetidas');
+  vars.forEach((v) => { if (!Number.isInteger(Number(v.precio)) || Number(v.precio) <= 0) throw new ApiError(400, 'Cada precio debe ser un número entero mayor a 0'); });
+  if (db.prepare('SELECT 1 FROM servicio WHERE nombre = ?').get(nombre)) throw new ApiError(409, 'Ya existe un servicio con ese nombre');
+  const id = db.transaction(() => {
+    const sid = db.prepare('INSERT INTO servicio(nombre, categoria, grupo, subgrupo, duracion_texto) VALUES (?,?,?,?,?)')
+      .run(nombre, b.categoria, grupo, subgrupo, b.categoria === 'corte' ? null : String(b.duracion_texto || '').trim() || null).lastInsertRowid;
+    const ins = db.prepare('INSERT INTO servicio_variante(servicio_id, etiqueta, precio_tarjeta, precio_efectivo, precio_desde) VALUES (?,?,?,?,?)');
+    vars.forEach((v, i) => ins.run(sid, etiquetas[i], Number(v.precio), efectivoDe(Number(v.precio), b.categoria), v.desde ? 1 : 0));
+    audit('servicio', sid, 'crear', { nombre, categoria: b.categoria, grupo, variantes: vars.length });
+    return sid;
+  })();
+  res.status(201).json({ id });
+});
+
+// Agregar una variante (opción/talle/nivel) a un servicio existente
+router.post('/:id/variantes', (req, res) => {
+  const s = db.prepare('SELECT id, categoria FROM servicio WHERE id = ?').get(req.params.id);
+  if (!s) throw new ApiError(404, 'Servicio inexistente');
+  const etiqueta = String(req.body?.etiqueta || '').trim();
+  const precio = Number(req.body?.precio);
+  if (!etiqueta) throw new ApiError(400, 'Falta el nombre de la opción');
+  if (!Number.isInteger(precio) || precio <= 0) throw new ApiError(400, 'El precio debe ser un número entero mayor a 0');
+  if (db.prepare('SELECT 1 FROM servicio_variante WHERE servicio_id = ? AND etiqueta = ?').get(s.id, etiqueta)) throw new ApiError(409, 'Esa opción ya existe');
+  const id = db.prepare('INSERT INTO servicio_variante(servicio_id, etiqueta, precio_tarjeta, precio_efectivo, precio_desde) VALUES (?,?,?,?,?)')
+    .run(s.id, etiqueta, precio, efectivoDe(precio, s.categoria), req.body?.desde ? 1 : 0).lastInsertRowid;
+  audit('servicio', s.id, 'variante', { etiqueta, precio });
+  res.status(201).json({ id });
+});
+
 // body: { porcentaje, grupo: 'todos' | nombre del grupo, redondeo: 1|100|500|1000, aplicar: bool }
 // sin aplicar devuelve solo la vista previa
 router.post('/actualizar-precios', (req, res) => {

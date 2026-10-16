@@ -186,3 +186,64 @@ select:focus,input:focus,textarea:focus{outline:2px solid var(--oro-claro);borde
 .vfila input{width:110px;text-align:right}
 .act{max-width:760px;margin-bottom:18px}.act .fila-act{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:10px}
 .act .fila-act label{font-size:12px;color:var(--sec);display:block}
+
+
+/* ===== pantalla completa, paneles y modales ===== */
+.vista{padding:20px 28px}
+.cobrar{max-width:none;grid-template-columns:minmax(0,1fr) 400px}
+.kpis,.copias-grid,.tarjetas,.act{max-width:none}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.vista.fija{overflow:hidden;display:flex;flex-direction:column}
+.vista.fija h1{flex:none}
+
+/* modales: redondeados, sin barra de scroll, contenido adentro */
+.modal>div{overflow:visible;max-height:none;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:26px 28px}
+.modal>div.ancho{width:min(860px,94vw)}
+.mod-cab h2{font-size:28px}
+.mod-tabla{max-height:28vh;overflow:auto;margin:8px 0}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin-top:6px}
+.mod-grid textarea{resize:none}
+.mod-info{margin-top:8px}
+.mod-acc{display:flex;gap:10px;align-items:center;margin-top:18px}
+.mod-acc .sp{flex:1}
+.mod-acc button.btn-verde{width:auto}
+.var-fila{display:grid;grid-template-columns:1fr 130px auto auto;gap:8px;align-items:center;margin-bottom:6px}
+.var-fila .desde{font-size:12px;color:var(--sec);white-space:nowrap}.var-fila .desde input{width:auto}
+
+/* buscador único de clienta */
+.combo{position:relative}
+.combo input{width:100%;padding-right:36px;box-sizing:border-box}
+.combo.elegida input{background:#fff8e6;font-weight:600;border-color:var(--oro)}
+.combo-x{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:22px;line-height:1;color:var(--sec);cursor:pointer}
+.combo-lista{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--borde);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.14);z-index:60;overflow:hidden}
+.combo-lista button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:10px 14px;border-bottom:1px solid #f1e9d6;font-size:14px}
+.combo-lista button:last-child{border-bottom:0;color:var(--verde)}
+.combo-lista button:hover{background:#fbf5e4}
+.combo-lista small{display:block;color:var(--sec);font-size:11px}
+
+/* chevrones y selectores de período */
+.chev{width:32px;height:32px;border-radius:50%;border:1px solid var(--borde);background:#fff;color:var(--verde);font-size:18px;line-height:1;cursor:pointer}
+.chev:hover:not(:disabled){border-color:var(--oro);background:#fbf5e4}.chev:disabled{opacity:.35;cursor:default}
+.seg{display:inline-flex;border:1px solid var(--borde);border-radius:20px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:7px 16px;font-size:13px;color:var(--sec)}.seg button.on{background:var(--verde);color:#fff}
+.per-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.per-nav .sp{flex:1}
+.per-lbl{min-width:150px;text-align:center}.per-lbl b{font-family:var(--serif);font-size:20px;font-weight:500;display:block}.per-lbl small{color:var(--sec);font-size:11px}
+.pager{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sec)}
+.hist-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.barras.mes{gap:3px}.barras.mes .barra{font-size:9px}.barras.mes .barra i{width:80%}
+.cierre-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+
+/* clientas: ocupa solo la pantalla */
+.cli{flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;max-width:none;align-items:stretch}
+.cli-izq{display:flex;flex-direction:column;min-height:0}
+.cli-lista{flex:1;min-height:0;overflow:auto;max-height:none;margin-top:10px;padding-right:2px}
+.cli-der{display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
+.cli-datos{flex:none;padding:14px 18px}
+.cli-cab{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.cli-cab h2{font-size:26px;margin:0}
+.cli-cab .resumen-cli{margin:0}
+.cli-campos{display:grid;grid-template-columns:repeat(6,1fr);gap:4px 12px;margin-top:8px}
+.cli-campos .cam{margin-top:4px}.cli-campos textarea{resize:none}
+.cli-hist{flex:1;min-height:0;display:flex;flex-direction:column;background:#fff}
+.hist-lista{flex:1;min-height:0;overflow:auto}

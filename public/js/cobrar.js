@@ -267,30 +267,16 @@ const Cobrar = (() => {
   // ---------- clienta y ficha (panel lateral) ----------
   function abrirClienta() {
     const d = $('#drawer');
-    const pintar = (lista = []) => {
-      d.innerHTML = `<div><h2 style="font-size:26px">Clienta y ficha</h2><p class="nota">Es opcional: se puede cobrar sin clienta.</p>
-        ${S.cliente ? `<div class="clienta"><span><b>${h(S.cliente.nombre)}</b></span><button class="btn-lnk" id="cl-quitar">Quitar</button></div>` : ''}
-        <label class="cam">Buscar clienta</label><input type="text" id="cl-q" placeholder="Nombre">
-        <div class="lista-cl" id="cl-lista">${lista.map((c) => `<button data-id="${c.id}" data-nombre="${h(c.nombre)}">${h(c.nombre)}<br><small>${h(c.contacto || '')}</small></button>`).join('')}</div>
-        <details><summary style="cursor:pointer;color:var(--verde)">Nueva clienta</summary>
-          <label class="cam">Nombre</label><input type="text" id="cl-nombre"><label class="cam">Contacto</label><input type="text" id="cl-contacto">
-          <button class="btn-oro" id="cl-crear" style="margin-top:10px">Crear y asociar</button></details>
-        <label class="cam">Ficha de este turno (opcional)</label><textarea id="cl-ficha" rows="4">${h(S.ficha)}</textarea>
-        <label class="cam">Notas (opcional)</label><textarea id="cl-notas" rows="2">${h(S.notas)}</textarea>
-        <div style="margin-top:16px"><button class="btn-verde" id="cl-ok">Listo</button></div></div>`;
-      d.hidden = false;
-      $('#cl-q', d).oninput = async (e) => { pintar(await api('GET', '/api/clientes?q=' + encodeURIComponent(e.target.value))); $('#cl-q', d).value = e.target.value; $('#cl-q', d).focus(); };
-      d.querySelectorAll('#cl-lista button').forEach((b) => { b.onclick = () => { S.cliente = { id: Number(b.dataset.id), nombre: b.dataset.nombre }; pintar(); }; });
-      $('#cl-quitar', d)?.addEventListener('click', () => { S.cliente = null; pintar(); });
-      $('#cl-crear', d).onclick = async () => {
-        const nombre = $('#cl-nombre', d).value.trim(); if (!nombre) return toast('Falta el nombre', { error: true });
-        const c = await api('POST', '/api/clientes', { nombre, contacto: $('#cl-contacto', d).value.trim() || null });
-        S.cliente = { id: c.id, nombre: c.nombre }; pintar();
-      };
-      $('#cl-ok', d).onclick = () => { S.ficha = $('#cl-ficha', d).value.trim(); S.notas = $('#cl-notas', d).value.trim(); d.hidden = true; renderDer(); };
-    };
-    pintar();
-    api('GET', '/api/clientes?q=').then((l) => { if (!d.hidden) { const f = $('#cl-ficha', d)?.value, n = $('#cl-notas', d)?.value; pintar(l); $('#cl-ficha', d).value = f; $('#cl-notas', d).value = n; } });
+    d.innerHTML = `<div><h2 style="font-size:26px">Clienta y ficha</h2><p class="nota">Es opcional: se puede cobrar sin clienta.</p>
+      <label class="cam">Clienta</label><div id="cl-combo"></div>
+      <label class="cam">Ficha de este turno (opcional)</label><textarea id="cl-ficha" rows="4">${h(S.ficha)}</textarea>
+      <label class="cam">Notas (opcional)</label><textarea id="cl-notas" rows="2">${h(S.notas)}</textarea>
+      <div style="margin-top:16px"><button class="btn-verde" id="cl-ok">Listo</button></div></div>`;
+    selectorClienta($('#cl-combo', d), { valor: S.cliente, onCambio: (c) => { S.cliente = c; } });
+    // al cerrar (Listo, tocar afuera o Esc) se conservan la ficha y las notas escritas
+    d.alCerrar = () => { S.ficha = $('#cl-ficha', d).value.trim(); S.notas = $('#cl-notas', d).value.trim(); renderDer(); };
+    $('#cl-ok', d).onclick = () => cerrarCapa(d);
+    d.hidden = false;
   }
 
 
