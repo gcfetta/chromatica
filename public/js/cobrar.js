@@ -25,7 +25,7 @@ const Cobrar = (() => {
     K = { servicios: [...mapa.values()], config, empleados: empleados.filter((e) => e.activo) };
   }
 
-  const precioDe = (v, cat) => (S.metodo === 'efectivo' && cat !== 'corte' ? v.efectivo : v.tarjeta);
+  const precioDe = (v) => v.tarjeta;   // en las cards siempre se muestra el precio de lista
   const modoDe = (empId, cat) => K.empleados.find((e) => String(e.id) === String(empId))?.pagos[cat]?.modo;
   const empDefault = (cat) => {
     if (cat !== 'corte') return '';
@@ -79,25 +79,25 @@ const Cobrar = (() => {
     
     // Migas de pan formateadas exactamente como en la maqueta
     const migas = S.ruta.length
-      ? S.ruta.map((m, i) => `<button data-acc="miga" data-i="${i}">${h(m.label)}</button>`).join(' <span class="sep">›</span> ') + 
-        ` <button data-acc="reiniciar">Empezar de nuevo</button>`
+      ? S.ruta.map((m, i) => `<button data-acc="miga" data-i="${i}" style="white-space:nowrap;">${h(m.label)}</button>`).join(' <span class="sep">›</span> ') + 
+        ` <button data-acc="reiniciar" style="white-space:nowrap;">Empezar de nuevo</button>`
       : 'Elegí el primer paso';
       
     let cuerpo = '';
     if (paso.tipo === 'opciones') {
       cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones">${paso.ops.map((o) =>
-        `<button class="op" data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}"><b>${h(o.t)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`).join('')}</div></div>`;
+        `<button class="op" data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}"><b style="font-size:20px; line-height:1.2;">${h(o.t)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`).join('')}</div></div>`;
     } else if (paso.tipo === 'hoja') cuerpo = hojaHTML(paso);
     else cuerpo = otroHTML();
 
     // Encabezado izquierdo con Título y Migas dentro del contenedor de la izquierda
     el.querySelector('#izq').innerHTML = `
       <div class="cobrar-izq-cab">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div class="eyebrow">Nuevo cobro</div>
-          <div class="migas-top-bar">${migas}</div>
+        <div class="eyebrow" style="white-space:nowrap; margin-bottom:4px;">Nuevo cobro</div>
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:4px 16px;">
+          <h1 style="margin:0;">Armá el servicio</h1>
+          <div class="migas-top-bar" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:2px 6px; min-width:0; flex:1 1 auto; text-align:right; padding-bottom:6px;">${migas}</div>
         </div>
-        <h1 style="margin:0;">Armá el servicio</h1>
       </div>
       <div class="hoja-contenedor-cards">${cuerpo}</div>`;
   }
@@ -116,15 +116,18 @@ const Cobrar = (() => {
   function hojaHTML({ s, v }) {
     const cat = s.categoria;
     const recorrido = [s.nombre, ['Único', 'Desde'].includes(v.etiqueta) ? null : v.etiqueta].filter(Boolean).join(' · ');
-    const lista = v.tarjeta, ef = v.efectivo;
-    const dto = S.metodo === 'efectivo' && cat !== 'corte' && ef < lista ? `<small class="nota">Lista ${peso(lista)} · descuento efectivo/transferencia</small>` : '';
+    const pct = Number(K.config.descuento_efectivo_pct || 0);
+    const tipeado = Number(S.b.precio) > 0 ? Number(S.b.precio) : null;
+    const base = tipeado ?? v.tarjeta;
+    const ef = tipeado ? Math.round(tipeado * (100 - pct) / 100) : v.efectivo;
+    const dto = cat !== 'corte' && ef < base ? `<small class="nota">Efectivo / transferencia (${pct}% off): <b>${peso(ef)}</b></small>` : '';
     const editar = S.b.editar || v.desde;
     return `<div class="hoja"><div class="eyebrow">Último paso</div><h3>${h(recorrido)}</h3>
       <div class="precio">${peso(precioDe(v, cat))}</div>${dto}
       ${s.dur ? `<div class="chip">Duración promedio: ${h(s.dur)}</div>` : ''}
       <label class="cam">Profesional</label>${selEmpleado(cat, S.b.emp, 'b.emp')}
       ${horasHTML(cat)}
-      ${editar ? `<label class="cam">${v.desde ? 'Precio (desde — ajustalo)' : 'Precio final'}</label><input type="number" min="0" data-campo="b.precio" value="${h(S.b.precio || (v.desde ? precioDe(v, cat) : ''))}">`
+      ${editar ? `<label class="cam">${v.desde ? 'Precio de lista (desde — ajustalo)' : 'Precio de lista'}</label><input type="number" min="0" data-campo="b.precio" value="${h(S.b.precio || (v.desde ? precioDe(v, cat) : ''))}">`
         : `<div style="margin-top:10px"><button class="btn-lnk" data-acc="editar-precio">Cambiar precio</button></div>`}
       <div style="margin-top:16px"><button class="btn-verde" data-acc="sumar" data-v="${v.id}" data-cat="${cat}" data-desde="${v.desde ? 1 : 0}" data-pre="${precioDe(v, cat)}">Sumar al cobro</button></div></div>`;
   }
@@ -141,7 +144,8 @@ const Cobrar = (() => {
 
   function renderDer() {
     const c = S.calc;
-    const dto = (c?.servicios || []).filter((x) => !x.editado).reduce((a, x) => a + Math.max(0, x.descuento), 0);
+    const dto = (c?.servicios || []).reduce((a, x) => a + Math.max(0, x.descuento), 0);
+    const lista = (c?.servicios || []).reduce((a, x) => a + x.precio_lista, 0);
     const opciones = K.config.cuotas_opciones;
     const optsEmp = (sel) => `<option value="">Sin asignar</option>${K.empleados.map((e) => `<option value="${e.id}" ${String(e.id) === String(sel ?? '') ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}`;
     const nomEmp = (id) => K.empleados.find((e) => String(e.id) === String(id))?.nombre || 'Sin asignar';
@@ -150,15 +154,20 @@ const Cobrar = (() => {
       const x = c?.servicios?.[i];
       const nombre = x?.recorrido || l.descripcion || 'Servicio';
       const pideHoras = x?.pago_modo === 'hora';
-      const extra = !x ? '' : pideHoras
-        ? (l.horas == null ? 'Faltan cargar las horas' : `${l.horas} hs`)
-        : `Comisión ${peso(x.pago_monto)}`;
+      // Comisión: solo si hay profesional asignado
+      let extra = '';
+      if (x && x.empleado_id) {
+        if (pideHoras) extra = l.horas == null
+          ? 'Faltan cargar las horas'
+          : `${l.horas} hs × ${peso(x.pago_valor)} · Comisión ${peso(x.pago_monto)}`;
+        else extra = `Comisión ${peso(x.pago_monto)} (${x.pago_valor}%)`;
+      }
       return `<div class="linea">
-        <div class="t"><b>${h(nombre)}</b><span class="p">${peso(x ? x.precio_cobrado : 0)}</span></div>
-        <small>${h(nomEmp(x ? x.empleado_id : l.empleado_id))}${extra ? ` · <span class="com">${h(extra)}</span>` : ''}${x?.editado ? ` · <span class="ed">precio editado</span>` : ''}</small>
+        <div class="t"><b>${h(nombre)}</b><span class="p">${x?.editado ? `${x.precio_automatico !== x.precio_cobrado ? `<s style="font-size:.7em;font-weight:400;opacity:.55;margin-right:6px;">${peso(x.precio_automatico)}</s>` : ''}` : ''}${peso(x ? x.precio_cobrado : 0)}</span></div>
+        <small>${h(nomEmp(x ? x.empleado_id : l.empleado_id))}${extra ? ` · <span class="com">${h(extra)}</span>` : ''}${x?.editado ? ` · <span class="ed">precio de lista editado (${x.precio_lista >= x.lista_original ? '+' : '−'} ${peso(Math.abs(x.precio_lista - x.lista_original))})</span>` : ''}</small>
         <div class="mini" ${pideHoras ? '' : 'style="grid-template-columns:1fr"'}><select data-campo="l.${i}.emp">${optsEmp(x ? x.empleado_id : l.empleado_id)}</select>
           ${pideHoras ? `<input type="number" step="0.25" min="0" data-campo="l.${i}.horas" value="${l.horas ?? ''}" placeholder="hs">` : ''}</div>
-        ${S.editLinea === i ? `<div class="mini"><input type="number" min="0" data-campo="l.${i}.precio" value="${x ? x.precio_cobrado : ''}"><button class="btn-lnk" data-acc="precio-ok" data-i="${i}">OK</button></div>` : ''}
+        ${S.editLinea === i ? `<div class="mini"><input type="number" min="0" data-campo="l.${i}.precio" value="${x ? x.precio_lista : ''}"><button class="btn-lnk" data-acc="precio-ok" data-i="${i}">OK</button></div>` : ''}
         <div class="acc"><button class="btn-lnk" data-acc="precio-linea" data-i="${i}">Editar precio</button><button class="btn-lnk" data-acc="quitar" data-i="${i}">Quitar</button></div></div>`;
     }).join('') : `<div class="vacio">Todavía no hay servicios sumados.</div>`;
 
@@ -196,7 +205,7 @@ const Cobrar = (() => {
         ${c?.horas_pendientes ? `<div class="aviso">Faltan cargar las horas de ${c.horas_pendientes} servicio(s).</div>` : ''}
         
         <div class="tot">
-          <div><span>Total servicios bruta</span><span>${peso(c?.total ? c.total + dto + (c?.sena || 0) : 0)}</span></div>
+          <div><span>Total servicios</span><span>${peso(lista)}</span></div>
           ${dto > 0 ? `<div class="dto-row"><span class="dto-lbl">Descuento efectivo ${K.config.descuento_efectivo_pct}%</span><span>- ${peso(dto)}</span></div>` : ''}
           ${(c?.sena || 0) > 0 ? `<div class="sena-row"><span class="sena-lbl">Seña descontada</span><span>- ${peso(c.sena)}</span></div>` : ''}
         </div>
@@ -234,7 +243,7 @@ const Cobrar = (() => {
       const emp = S.b.emp === null ? empDefault(d.cat) : S.b.emp;
       const l = { variante_id: Number(d.v), empleado_id: emp === '' ? null : Number(emp) };
       if (S.b.horas !== '') l.horas = Number(S.b.horas);
-      if (S.b.precio !== '' && (S.b.editar || d.desde === '1')) l.precio_cobrado = Number(S.b.precio);
+      if (S.b.precio !== '' && (S.b.editar || d.desde === '1')) l.precio_lista = Number(S.b.precio);
       S.servicios.push(l); S.ruta = []; S.b = bVacio(); calcular();
     },
     'sumar-otro': () => {
@@ -250,7 +259,12 @@ const Cobrar = (() => {
       const inp = el.querySelector(`[data-campo="l.${d.i}.precio"]`);
       aplicarPrecio(Number(d.i), inp ? inp.value : '');
     },
-    metodo: (d) => { S.metodo = d.m; S.cuotas = d.m === 'tarjeta' ? (S.cuotas ?? K.config.cuotas_opciones.at(-1)) : null; renderIzq(); calcular(); },
+    metodo: (d) => {
+      if (d.m === S.metodo) return;
+      S.metodo = d.m;
+      S.cuotas = d.m === 'tarjeta' ? (S.cuotas ?? K.config.cuotas_opciones.at(-1)) : null;
+      calcular();
+    },
     clienta: () => abrirClienta(),
     guardar: async () => {
       S.guardando = true; renderDer();
@@ -270,7 +284,7 @@ const Cobrar = (() => {
 
   function aplicarPrecio(i, val) {
     const l = S.servicios[i]; S.editLinea = null;
-    if (val === '' || isNaN(Number(val))) delete l.precio_cobrado; else l.precio_cobrado = Number(val);
+    if (val === '' || isNaN(Number(val))) delete l.precio_lista; else l.precio_lista = Number(val);
     calcular();
   }
 

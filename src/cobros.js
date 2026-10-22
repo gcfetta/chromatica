@@ -77,16 +77,24 @@ function calcularLinea(l, metodo, descPct) {
     throw new ApiError(400, 'Cada servicio necesita variante_id, o categoria "otro" con descripcion y monto');
   }
 
-  let cobrado = automatico, editado = 0;
-  if (l.precio_cobrado != null) {
-    const p = entero(l.precio_cobrado, 'Precio editado inválido');
-    if (p !== automatico) { cobrado = p; editado = 1; }
+  // Precio editado = precio de LISTA nuevo; el descuento de efectivo se calcula sobre él
+  const listaOriginal = lista, automaticoOriginal = automatico;
+  let editado = 0;
+  if (l.precio_lista != null) {
+    const p = entero(l.precio_lista, 'Precio de lista inválido');
+    if (p <= 0) throw new ApiError(400, 'El precio de lista debe ser mayor a 0');
+    if (p !== lista) {
+      lista = p; editado = 1;
+      const conDescuento = metodo === 'efectivo' && categoria !== 'corte' && !(categoria === 'otro' && l.aplicar_descuento === false);
+      automatico = conDescuento ? Math.round(lista * (100 - descPct) / 100) : lista;
+    }
   }
+  const cobrado = automatico;
 
   const empleado_id = empleadoDeLinea(l, categoria);
   return {
     variante_id, categoria, recorrido, empleado_id,
-    precio_lista: lista, precio_cobrado: cobrado, editado,
+    precio_lista: lista, lista_original: listaOriginal, precio_automatico: automaticoOriginal, precio_cobrado: cobrado, editado,
     ...pagoDeLinea(empleado_id, categoria, cobrado, horasValidas(l.horas)),
   };
 }
