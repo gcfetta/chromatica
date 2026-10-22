@@ -12,7 +12,7 @@ const App = (() => {
   }
 
   function pintarNav() {
-    $('#nav').innerHTML = VISTAS.map(([k, t, i]) => `<button class="nav-item ${k === actual ? 'on' : ''}" data-vista="${k}">${i} &nbsp;${h(t)}</button>`).join('');
+    $('#nav').innerHTML = VISTAS.map(([k, t, i]) => `<button class="nav-item ${k === actual ? 'on' : ''}" data-vista="${k}">${h(t)}</button>`).join('');
   }
 
   async function ir(vista) {

@@ -8,6 +8,7 @@ const Ganancias = (() => {
   const P = { mes: null, emp: '' };             // pagos al personal
   const C = { hasta: '', nota: '', i: 0 };      // cierre de caja (i = mes visible de los cierres anteriores)
   const nombreMes = (ym) => `${MESES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+  const conAv = (n) => `<span class="emp"><span class="av sm">${h(String(n || '?').trim().charAt(0).toUpperCase())}</span>${h(n)}</span>`;
   const chev = (acc, extra, simbolo, off) => `<button class="chev" data-acc="${acc}" ${extra} ${off ? 'disabled' : ''}>${simbolo}</button>`;
 
   function semanaActual() {
@@ -51,13 +52,13 @@ const Ganancias = (() => {
     const largo = r.dias.length > 8;
     return `${r.horas_pendientes ? `<div class="aviso">Hay ${r.horas_pendientes} servicio(s) de color con horas pendientes. <button class="btn-lnk" data-acc="tab" data-k="historial">Completarlas en el historial</button></div>` : ''}
       <div class="per-nav"><div class="seg"><button class="${p.tipo === 'semana' ? 'on' : ''}" data-acc="tipo" data-t="semana">Semana</button><button class="${p.tipo === 'mes' ? 'on' : ''}" data-acc="tipo" data-t="mes">Mes</button></div>
-        ${chev('per', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${actual ? `<small>${actual}</small>` : ''}</div>${chev('per', 'data-d="1"', '›', p.offset >= 0)}
+        <div class="per-pill">${chev('per', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${actual ? `<small>${actual}</small>` : ''}</div>${chev('per', 'data-d="1"', '›', p.offset >= 0)}</div>
         ${p.offset < 0 ? '<button class="btn-lnk" data-acc="per-hoy">Volver a hoy</button>' : ''}</div>
       <div class="kpis"><div class="panel kpi"><div class="eyebrow">Ganancia de la pelu</div><div class="grande">${peso(p.ganancia)}</div>
           <div class="tot"><div><span>Cobrado (${p.cobros} cobros)</span><span>${peso(p.total)}</span></div><div><span>Pagos al personal</span><span>− ${peso(p.pagos_empleados)}</span></div><div><span>Gastos</span><span>− ${peso(p.gastos)}</span></div></div></div>
-        <div class="panel"><div class="eyebrow">Cobros por día</div><div class="barras ${largo ? 'mes' : ''}">${r.dias.map((d, i) => `<div class="barra" title="${fdia(d.dia)}: ${peso(d.total)}">${largo ? '' : `<span class="v">${d.total ? peso(d.total).replace('$ ', '') : ''}</span>`}<i style="height:${Math.round(d.total / max * 100)}%"></i><span>${largo ? Number(d.dia.slice(8)) : DIAS[i]}</span></div>`).join('')}</div></div></div>
+        <div class="panel"><div class="eyebrow">Cobros por día</div><div class="barras ${largo ? 'mes' : ''}">${r.dias.map((d, i) => `<div class="barra" title="${fdia(d.dia)}: ${peso(d.total)}">${largo ? '' : `<span class="v">${d.total ? peso(d.total).replace('$ ', '') : ''}</span>`}<i class="${d.total ? '' : 'cero'}" style="height:${Math.round(d.total / max * 100)}%"></i><span>${largo ? Number(d.dia.slice(8)) : DIAS[i]}</span></div>`).join('')}</div></div></div>
       <div class="panel"><div class="eyebrow">A pagar al personal (desde el último cierre de caja)</div>
-        ${r.a_pagar.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">A pagar</th></tr>${r.a_pagar.map((e) => `<tr><td>${h(e.empleado)}</td><td class="r">${peso(e.pagos)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay empleados cargados.</p>'}</div>`;
+        ${r.a_pagar.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">A pagar</th></tr>${r.a_pagar.map((e) => `<tr><td>${conAv(e.empleado)}</td><td class="r">${peso(e.pagos)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay empleados cargados.</p>'}</div>`;
   }
 
   // ---------- Historial ----------
@@ -66,16 +67,16 @@ const Ganancias = (() => {
     const validos = l.filter((c) => !c.anulado);
     const sigDesde = H.modo === 'mes' ? mesDe(sumar(H.hasta, 1))[0] : sumar(H.desde, 7);
     const etiqueta = H.modo === 'mes' ? nombreMes(H.desde) : `${fdia(H.desde)} al ${fdia(H.hasta)}`;
-    return `<div class="per-nav"><div class="seg"><button class="${H.modo === 'semana' ? 'on' : ''}" data-acc="h-modo" data-m="semana">Semana</button><button class="${H.modo === 'mes' ? 'on' : ''}" data-acc="h-modo" data-m="mes">Mes completo</button></div>
-        ${chev('h-mover', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${H.modo === 'mes' ? `<small>${l.length} ${l.length === 1 ? 'cobro' : 'cobros'} del mes</small>` : ''}</div>${chev('h-mover', 'data-d="1"', '›', sigDesde > hoyISO())}
+    return `<div class="panel barra-per"><div class="per-nav"><div class="seg"><button class="${H.modo === 'semana' ? 'on' : ''}" data-acc="h-modo" data-m="semana">Semana</button><button class="${H.modo === 'mes' ? 'on' : ''}" data-acc="h-modo" data-m="mes">Mes completo</button></div>
+        <div class="per-pill">${chev('h-mover', 'data-d="-1"', '‹')}<div class="per-lbl"><b>${h(etiqueta)}</b>${H.modo === 'mes' ? `<small>${l.length} ${l.length === 1 ? 'cobro' : 'cobros'} del mes</small>` : ''}</div>${chev('h-mover', 'data-d="1"', '›', sigDesde > hoyISO())}</div>
         <button class="btn-lnk" data-acc="esta-semana">Hoy</button></div>
-      <div class="filtro"><label>Desde <input type="date" data-campo="h-desde" value="${H.desde}"></label><label>Hasta <input type="date" data-campo="h-hasta" value="${H.hasta}"></label></div>
+      <div class="filtro"><label>Desde <input type="date" data-campo="h-desde" value="${H.desde}"></label><label>Hasta <input type="date" data-campo="h-hasta" value="${H.hasta}"></label></div></div>
 
-      ${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Clienta</th><th>Servicios</th><th class="r">Precio final</th><th></th></tr>
-      ${l.map((c) => `<tr class="fila-cobro ${c.anulado ? 'anulado' : ''}" data-acc="ver" data-id="${c.id}"><td>${fdia(c.fecha)}</td><td>${h(c.clienta || '—')}</td>
+      <div class="panel">${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Clienta</th><th>Servicios</th><th class="r">Precio final</th><th></th></tr>
+      ${l.map((c) => `<tr class="fila-cobro ${c.anulado ? 'anulado' : ''}" data-acc="ver" data-id="${c.id}"><td>${fdia(c.fecha)}</td><td class="${c.clienta ? '' : 'sin'}">${c.clienta ? conAv(c.clienta) : '— Sin asignar'}</td>
         <td>${c.servicios.map((s) => h(s.recorrido.replaceAll(' › ', ' · '))).join('<br>')}</td><td class="r">${peso(c.total)}</td>
         <td>${c.anulado ? '<span class="tag mal">Anulado</span>' : ''}${c.horas_pendientes ? '<span class="tag aviso-t">Horas pendientes</span>' : ''}${c.cierre_id ? '<span class="tag">Cerrado</span>' : ''}</td></tr>`).join('')}
-      <tr class="pie"><td colspan="3">Total (${validos.length} cobros)</td><td class="r"><b>${peso(validos.reduce((a, c) => a + c.total, 0))}</b></td><td></td></tr></table>` : '<p class="nota" style="margin-top:16px">No hay cobros en estas fechas.</p>'}`;
+      <tr class="pie"><td colspan="3">Total (${validos.length} cobros)</td><td class="r"><b>${peso(validos.reduce((a, c) => a + c.total, 0))}</b></td><td></td></tr></table>` : '<p class="nota">No hay cobros en estas fechas.</p>'}</div>`;
   }
 
   // ---------- Movimientos ----------
@@ -87,8 +88,8 @@ const Ganancias = (() => {
         <select id="mv-emp" hidden>${emps.filter((e) => e.activo).map((e) => `<option value="${e.id}">${h(e.nombre)}</option>`).join('')}</select>
         <input type="number" min="0" id="mv-monto" placeholder="Monto"><input type="text" id="mv-concepto" placeholder="Concepto (opcional)"><button class="btn-oro" data-acc="mv-agregar">Agregar</button></div>
       <p class="nota">Los gastos restan ganancia; los adelantos se descuentan al empleado; los retiros no restan ganancia.</p></div>
-      ${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="r">Monto</th><th></th></tr>${l.map((m) => `<tr><td>${fdia(m.fecha)}</td><td>${NOM[m.tipo]}${m.empleado ? ' · ' + h(m.empleado) : ''}</td><td>${h(m.concepto || '')}</td><td class="r">${peso(m.monto)}</td><td><button class="btn-lnk" data-acc="mv-anular" data-id="${m.id}">Anular</button></td></tr>`).join('')}</table>
-      <p class="nota">Solo se muestran los movimientos sin cerrar.</p>` : '<p class="nota">No hay movimientos sin cerrar.</p>'}`;
+      <div class="panel">${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="r">Monto</th><th></th></tr>${l.map((m) => `<tr><td>${fdia(m.fecha)}</td><td><span class="tag t-${m.tipo}">${NOM[m.tipo]}${m.empleado ? ' · ' + h(m.empleado) : ''}</span></td><td>${h(m.concepto || '')}</td><td class="r">${peso(m.monto)}</td><td><button class="btn-lnk" data-acc="mv-anular" data-id="${m.id}">Anular</button></td></tr>`).join('')}</table>
+      <p class="nota">Solo se muestran los movimientos sin cerrar.</p>` : '<p class="nota">No hay movimientos sin cerrar.</p>'}</div>`;
   }
 
   // ---------- Pagos al personal (historial, sale de los cierres de caja) ----------
@@ -96,12 +97,12 @@ const Ganancias = (() => {
     const [emps, r] = await Promise.all([api('GET', '/api/empleados'), api('GET', `/api/cierres/pagos?${P.mes ? `mes=${P.mes}&` : ''}empleado_id=${P.emp}`)]);
     P.mes = r.mes;
     const i = r.meses.indexOf(r.mes);
-    return `<div class="per-nav"><label class="filtro" style="margin:0">Empleado <select data-campo="p-emp"><option value="">Todos</option>${emps.map((e) => `<option value="${e.id}" ${String(e.id) === String(P.emp) ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}</select></label>
-        <span class="sp"></span>${chev('pmes', `data-m="${r.meses[i + 1] || ''}"`, '‹', !r.meses[i + 1])}<div class="per-lbl"><b>${r.mes ? nombreMes(r.mes) : 'Sin pagos'}</b></div>${chev('pmes', `data-m="${i > 0 ? r.meses[i - 1] : ''}"`, '›', !(i > 0))}</div>
-      ${r.filas.length ? `<table class="tabla"><tr><th>Cierre</th><th>Empleado</th><th class="r">Por %</th><th class="r">Por horas</th><th class="r">Total</th><th class="r">Adelantos</th><th class="r">Pagado</th></tr>
-        ${r.filas.map((f) => `<tr><td>${fdia(f.hasta)}</td><td>${h(f.empleado)}</td><td class="r">${peso(f.por_porcentaje)}</td><td class="r">${peso(f.por_horas)}</td><td class="r">${peso(f.pago_total)}</td><td class="r">− ${peso(f.adelantos)}</td><td class="r"><b>${peso(f.neto)}</b></td></tr>`).join('')}</table>
-        <div class="panel" style="margin-top:14px"><div class="eyebrow">Total del mes por empleado</div><table class="tabla">${r.totales.map((t) => `<tr><td>${h(t.empleado)}</td><td class="r">${peso(t.pago_total)}</td><td class="r">− ${peso(t.adelantos)}</td><td class="r"><b>${peso(t.neto)}</b></td></tr>`).join('')}</table></div>`
-        : '<p class="nota" style="margin-top:16px">Todavía no hay pagos registrados: cada vez que cerrás la caja queda anotado lo que se le pagó a cada empleado.</p>'}`;
+    return `<div class="per-nav"><label class="filtro">Empleado <select data-campo="p-emp"><option value="">Todos</option>${emps.map((e) => `<option value="${e.id}" ${String(e.id) === String(P.emp) ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}</select></label>
+        <span class="sp"></span><div class="per-pill">${chev('pmes', `data-m="${r.meses[i + 1] || ''}"`, '‹', !r.meses[i + 1])}<div class="per-lbl"><b>${r.mes ? nombreMes(r.mes) : 'Sin pagos'}</b></div>${chev('pmes', `data-m="${i > 0 ? r.meses[i - 1] : ''}"`, '›', !(i > 0))}</div></div>
+      ${r.filas.length ? `<div class="panel"><table class="tabla"><tr><th>Cierre</th><th>Empleado</th><th class="r">Por %</th><th class="r">Por horas</th><th class="r">Total</th><th class="r">Adelantos</th><th class="r">Pagado</th></tr>
+        ${r.filas.map((f) => `<tr><td>${fdia(f.hasta)}</td><td>${conAv(f.empleado)}</td><td class="r">${peso(f.por_porcentaje)}</td><td class="r">${peso(f.por_horas)}</td><td class="r">${peso(f.pago_total)}</td><td class="r">− ${peso(f.adelantos)}</td><td class="r"><b>${peso(f.neto)}</b></td></tr>`).join('')}</table></div>
+        <div class="panel" style="margin-top:24px"><div class="eyebrow">Total del mes por empleado</div><table class="tabla">${r.totales.map((t) => `<tr><td>${conAv(t.empleado)}</td><td class="r">${peso(t.pago_total)}</td><td class="r">− ${peso(t.adelantos)}</td><td class="r"><b>${peso(t.neto)}</b></td></tr>`).join('')}</table></div>`
+        : '<p class="nota">Todavía no hay pagos registrados: cada vez que cerrás la caja queda anotado lo que se le pagó a cada empleado.</p>'}`;
   }
 
   // ---------- Cierre de caja ----------
@@ -119,7 +120,7 @@ const Ganancias = (() => {
       <div class="tot" style="margin-top:14px"><div><span>Cobros incluidos</span><span>${p.cantidad_cobros}</span></div><div><span>Total cobrado</span><span>${peso(p.total_cobrado)}</span></div>
         <div><span>Pagos al personal</span><span>− ${peso(p.pagos_empleados)}</span></div><div><span>Gastos</span><span>− ${peso(p.gastos)}</span></div><div><span>Retiros (no restan ganancia)</span><span>${peso(p.retiros)}</span></div></div>
       <div class="saldo"><span>Ganancia de la pelu</span><b>${peso(p.ganancia_local)}</b></div>
-      ${p.por_empleado.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">Neto a pagar</th></tr>${p.por_empleado.map((e) => `<tr><td>${h(e.empleado)}</td><td class="r">${peso(e.pago_total)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : ''}
+      ${p.por_empleado.length ? `<table class="tabla"><tr><th>Empleado</th><th class="r">Pagos</th><th class="r">Adelantos</th><th class="r">Neto a pagar</th></tr>${p.por_empleado.map((e) => `<tr><td>${conAv(e.empleado)}</td><td class="r">${peso(e.pago_total)}</td><td class="r">− ${peso(e.adelantos)}</td><td class="r"><b>${peso(e.neto)}</b></td></tr>`).join('')}</table>` : ''}
       <label class="cam">Nota (opcional)</label><input type="text" data-campo="c-nota" value="${h(C.nota)}">
       <div style="margin-top:14px"><button class="btn-verde" data-acc="cerrar-caja" ${vacio || bloqueado ? 'disabled' : ''}>Cerrar caja</button></div></div>
       <div class="panel"><div class="hist-cab"><h3>Cierres anteriores</h3>${g ? `<div class="pager">${chev('cmes', 'data-d="1"', '‹', C.i >= grupos.length - 1)}<span><b>${nombreMes(g.ym)}</b></span>${chev('cmes', 'data-d="-1"', '›', C.i <= 0)}</div>` : ''}</div>

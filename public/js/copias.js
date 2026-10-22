@@ -18,16 +18,16 @@ const Copias = (() => {
       <div class="copias-grid">
         <div class="panel"><div class="eyebrow">Última copia</div><div class="grande">${ult ? fecha(ult.fecha) : 'Todavía no hay'}</div>
           <p class="nota">${ult ? MOT[ult.motivo] : 'Se hace una automática por día.'} · Se conservan todas, no se borra ninguna.</p>
-          <button class="btn-verde" style="width:auto" data-acc="copiar">Hacer copia ahora</button></div>
+          <button class="btn-verde" data-acc="copiar">Hacer copia ahora</button></div>
         <div class="panel"><div class="eyebrow">Copia en la nube (Google Drive / iCloud)</div>
           <p class="nota ${d.carpeta_sync && !d.sync_ok ? 'mal' : ''}" style="margin-top:8px">${h(estadoSync)}</p>
           <div class="fila-sync"><input type="text" id="cp-carpeta" placeholder="Carpeta sincronizada" value="${h(d.carpeta_sync || '')}"><button class="btn-oro" data-acc="carpeta">Guardar</button></div>
           <p class="nota" style="margin-top:8px">Elegí una carpeta dentro de Google Drive para escritorio o iCloud Drive; ellos la suben a la nube. Dejalo vacío para desactivar.</p></div>
       </div>
-      <div class="panel" style="background:#fff;margin-bottom:18px"><div class="eyebrow">Exportar para leer en Excel</div>
+      <div class="panel exp"><div class="eyebrow">Exportar para leer en Excel</div>
         <div class="exportar"><a href="/api/copias/exportar/cobros">Cobros (CSV)</a><a href="/api/copias/exportar/clientas">Clientas (CSV)</a><a href="/api/copias/exportar/movimientos">Movimientos (CSV)</a><a href="/api/copias/exportar/auditoria">Historial de cambios (CSV)</a></div></div>
-      <div class="panel" style="background:#fff"><div class="eyebrow">Copias guardadas</div>
-        ${d.copias.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th class="r">Tamaño</th><th></th></tr>${d.copias.map((c) => `<tr><td>${fecha(c.fecha)}</td><td>${MOT[c.motivo]}</td><td class="r">${Math.max(1, Math.round(c.tam / 1024))} KB</td>
+      <div class="panel"><div class="eyebrow">Copias guardadas</div>
+        ${d.copias.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th class="r">Tamaño</th><th></th></tr>${d.copias.map((c, i) => `<tr><td>${fecha(c.fecha)}${i === 0 ? '<span class="nuevo">Más reciente</span>' : ''}</td><td><span class="tag m-${c.motivo}">${MOT[c.motivo]}</span></td><td class="r">${Math.max(1, Math.round(c.tam / 1024))} KB</td>
           <td class="r"><button class="btn-lnk" data-acc="restaurar" data-n="${h(c.nombre)}">Restaurar</button></td></tr>`).join('')}</table>
         <p class="nota">Al restaurar, antes se guarda una copia del estado actual (tipo "Antes de restaurar").</p>` : '<p class="nota">No hay copias todavía.</p>'}</div>`;
   }

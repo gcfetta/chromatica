@@ -8,7 +8,7 @@ const Clientas = (() => {
     el = contenedor; el.classList.add('fija');
     el.onclick = onClick; el.oninput = onInput; el.onchange = null;
     el.innerHTML = `<h1>Clientas</h1><div class="cli"><aside class="panel cli-izq"><input type="text" id="cl-buscar" placeholder="Buscar por nombre o contacto" value="${h(q)}">
-      <button class="btn-oro" data-acc="nueva" style="margin-top:10px;width:100%">＋ Nueva clienta</button><div class="cli-lista" id="cl-lista"></div></aside><section class="cli-der" id="cl-ficha"></section></div>`;
+      <button class="btn-oro" data-acc="nueva">Nueva clienta</button><div class="cli-lista" id="cl-lista"></div></aside><section class="cli-der" id="cl-ficha"></section></div>`;
     const l = await lista();
     if (!sel && l.length) sel = l[0].id;
     if (sel) await ficha(sel); else $('#cl-ficha', el).innerHTML = '<p class="nota">Todavía no hay clientas. Escribí un nombre en el buscador y tocá "Nueva clienta".</p>';
@@ -16,7 +16,7 @@ const Clientas = (() => {
 
   async function lista() {
     const l = await api('GET', '/api/clientes?q=' + encodeURIComponent(q));
-    $('#cl-lista', el).innerHTML = l.length ? l.map((c) => `<button data-acc="ver" data-id="${c.id}" class="${c.id === sel ? 'on' : ''}">${h(c.nombre)}<small>${h(c.contacto || '')}</small></button>`).join('') : '<p class="nota">Sin resultados.</p>';
+    $('#cl-lista', el).innerHTML = l.length ? l.map((c) => `<button data-acc="ver" data-id="${c.id}" class="${c.id === sel ? 'on' : ''}"><span class="av">${h((c.nombre || '?').trim().charAt(0).toUpperCase())}</span><span class="cl-t"><b>${h(c.nombre)}</b><small>${h(c.contacto || '')}</small></span></button>`).join('') : '<p class="nota">Sin resultados.</p>';
     return l;
   }
 
@@ -35,14 +35,14 @@ const Clientas = (() => {
     const ver = visitas.slice(pag * POR_PAG, pag * POR_PAG + POR_PAG);
     const campo = (k, t, span, filas = 0) => `<div style="grid-column:span ${span}"><label class="cam">${t}</label>${filas ? `<textarea rows="${filas}" data-k="${k}">${h(c[k] || '')}</textarea>` : `<input type="text" data-k="${k}" value="${h(c[k] || '')}">`}</div>`;
     $('#cl-ficha', el).innerHTML = `<div class="panel cli-datos"><div class="cli-cab"><div><div class="eyebrow">Ficha</div><h2>${h(c.nombre)}</h2></div>
-        <div class="resumen-cli"><div><b>${validas.length}</b>turnos</div><div><b>${peso(validas.reduce((a, v) => a + v.total, 0))}</b>total cobrado</div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
-        <div class="cli-btns"><button class="btn-verde" style="width:auto" data-acc="guardar">Guardar ficha</button>
+        <div class="resumen-cli"><div><b>${validas.length}</b>turnos</div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
+        <div class="cli-btns"><button class="btn-verde" data-acc="guardar">Guardar ficha</button>
           <button class="btn-lnk" data-acc="eliminar" ${visitas.length ? 'disabled title="Tiene turnos asociados: no se puede eliminar"' : ''}>Eliminar ficha</button></div></div>
       <div class="cli-campos">${campo('nombre', 'Nombre', 3)}${campo('contacto', 'Contacto', 3)}${campo('ficha', 'Ficha', 2, 2)}${campo('observacion', 'Observación', 2, 2)}${campo('notas_importantes', 'Notas importantes', 2, 2)}</div></div>
       <div class="panel cli-hist"><div class="hist-cab"><h3>Historial de turnos</h3>
         <div class="pager"><button class="chev" data-acc="pag" data-d="-1" ${pag === 0 ? 'disabled' : ''}>‹</button><span>${visitas.length ? `${pag * POR_PAG + 1}–${pag * POR_PAG + ver.length} de ${visitas.length}` : '0'}</span><button class="chev" data-acc="pag" data-d="1" ${pag >= paginas - 1 ? 'disabled' : ''}>›</button></div></div>
-        <div class="hist-lista">${ver.length ? ver.map((v) => `<div class="visita ${v.anulado ? 'anulado' : ''}" data-acc="cobro" data-id="${v.id}"><div class="t"><b>${fechaLarga(v.fecha)}</b><span>${peso(v.total)}${v.anulado ? ' <span class="tag mal">Anulado</span>' : ''}</span></div>
-          <ul>${v.servicios.map((s) => `<li>${h(s.recorrido.replaceAll(' › ', ' · '))} · ${peso(s.precio_cobrado)}</li>`).join('')}</ul>${v.ficha ? `<small class="nota">Ficha del turno: ${h(v.ficha)}</small>` : ''}</div>`).join('') : '<p class="nota">Todavía no tiene turnos cobrados.</p>'}</div></div>`;
+        <div class="hist-lista">${ver.length ? ver.map((v) => `<div class="visita ${v.anulado ? 'anulado' : ''}" data-acc="cobro" data-id="${v.id}"><div class="v-izq"><div class="v-fecha">${fechaLarga(v.fecha)}${v.anulado ? ' <span class="tag mal">Anulado</span>' : ''}</div>
+          <ul>${v.servicios.map((s) => `<li>${h(s.recorrido.replaceAll(' › ', ' · '))} · ${peso(s.precio_cobrado)}</li>`).join('')}</ul>${v.ficha ? `<small class="nota">Ficha del turno: ${h(v.ficha)}</small>` : ''}</div><div class="v-precio">${peso(v.total)}</div></div>`).join('') : '<p class="nota">Todavía no tiene turnos cobrados.</p>'}</div></div>`;
     await lista();
   }
 

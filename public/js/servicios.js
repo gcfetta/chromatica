@@ -46,7 +46,7 @@ const Servicios = (() => {
         <span class="ctl"><button class="mini-b" data-acc="var-mover" data-id="${v.variante_id}" data-d="-1" ${i === 0 ? 'disabled' : ''} title="Subir">↑</button><button class="mini-b" data-acc="var-mover" data-id="${v.variante_id}" data-d="1" ${i === sec.length - 1 ? 'disabled' : ''} title="Bajar">↓</button><button class="mini-b" data-acc="var-borrar" data-id="${v.variante_id}" title="Eliminar opción">✕</button></span></div>`;
     };
     const usados = secs.map((x) => x.n), libres = niveles().filter((n) => !usados.includes(n));
-    const bloque = (x) => `${x.n || editar ? `<div class="nivel">${x.n ? `${estrellas(x.n)}${h(x.n)}` : 'Sin categoría'}${editar ? `<span class="sp"></span><button class="btn-lnk" data-acc="var-nueva" data-s="${s.id}" data-n="${h(x.n)}">＋ Agregar</button>${x.n ? `<button class="btn-lnk" data-acc="cat-quitar" data-s="${s.id}" data-n="${h(x.n)}">Quitar categoría</button>` : ''}` : ''}</div>` : ''}${x.filas.map((v) => fila(v, x.n, x.filas)).join('')}`;
+    const bloque = (x) => `<div class="nv-blk">${x.n || editar ? `<div class="nivel" data-i="${niveles().indexOf(x.n)}">${x.n ? `${estrellas(x.n)}${h(x.n)}` : 'Sin categoría'}${editar ? `<span class="sp"></span><button class="btn-lnk" data-acc="var-nueva" data-s="${s.id}" data-n="${h(x.n)}">＋ Agregar</button>${x.n ? `<button class="btn-lnk" data-acc="cat-quitar" data-s="${s.id}" data-n="${h(x.n)}">Quitar categoría</button>` : ''}` : ''}</div>` : ''}${x.filas.map((v) => fila(v, x.n, x.filas)).join('')}</div>`;
     const sib = datos.filter((q) => q.categoria === s.categoria && q.grupo === s.grupo && q.subgrupo === s.subgrupo), k = sib.indexOf(s);
     return `<div class="srv"><h3>${h(s.nombre)}${s.subgrupo ? `<span class="tagg">${h(s.subgrupo)}</span>` : ''}</h3>${s.duracion ? `<div class="dur">Duración promedio: ${h(s.duracion)}</div>` : ''}
     ${editar ? `<div class="srv-ctl"><button class="btn-lnk" data-acc="srv-editar" data-s="${s.id}">✎ Editar</button><button class="mini-b" data-acc="srv-mover" data-s="${s.id}" data-d="-1" ${k === 0 ? 'disabled' : ''} title="Subir">↑</button><button class="mini-b" data-acc="srv-mover" data-s="${s.id}" data-d="1" ${k === sib.length - 1 ? 'disabled' : ''} title="Bajar">↓</button><span class="sp"></span><button class="btn-lnk" data-acc="srv-borrar" data-s="${s.id}">Eliminar servicio</button></div>` : ''}
@@ -63,14 +63,14 @@ const Servicios = (() => {
         <button class="btn-oro" data-acc="previa">Ver cambios</button></div>
       ${A.prev ? `<div style="margin-top:12px"><p><b>${A.prev.cantidad}</b> precios van a cambiar. Por ejemplo:</p><table class="tabla">${A.prev.ejemplos.map((e) => `<tr><td>${h(e.servicio)} · ${h(e.variante)}</td><td class="r">${peso(e.antes)}</td><td class="r">→ <b>${peso(e.despues)}</b></td></tr>`).join('')}</table>
         <p class="nota">Los cobros ya hechos no cambian. Antes de aplicar conviene una copia de seguridad (se guarda el detalle de cada cambio en el historial).</p>
-        <button class="btn-verde" style="width:auto;margin-top:8px" data-acc="aplicar">Aplicar ${A.pct > 0 ? '+' : ''}${h(A.pct)}%</button></div>` : ''}</div>`;
+        <button class="btn-verde" style="margin-top:8px" data-acc="aplicar">Aplicar ${A.pct > 0 ? '+' : ''}${h(A.pct)}%</button></div>` : ''}</div>`;
   }
 
   function pintar() {
     const lista = datos.filter((s) => filtro === 'Todos' || s.grupo === filtro);
     el.innerHTML = `<h1>Servicios y precios</h1>
       <div class="srv-barra"><div class="srv-chips">${['Todos', ...grupos()].map((g) => `<button class="chip ${g === filtro ? 'on' : ''}" data-acc="filtro" data-g="${h(g)}">${h(g)}</button>`).join('')}</div>
-        <div class="srv-btns"><button class="btn-oro" data-acc="nuevo">＋ Nuevo servicio</button><button class="btn-oro" data-acc="categorias">Categorías</button><button class="btn-oro" data-acc="editar">${editar ? 'Terminar edición' : 'Editar carta'}</button><button class="btn-oro" data-acc="abrir-act">Actualizar precios %</button></div></div>
+        <div class="srv-btns"><button class="btn-oro" data-acc="nuevo">Nuevo servicio</button><button class="btn-oro" data-acc="categorias">Categorías</button><button class="btn-oro" data-acc="editar">${editar ? 'Terminar edición' : 'Editar carta'}</button><button class="btn-oro" data-acc="abrir-act">Actualizar precios %</button></div></div>
     ${panelAct()}<p class="nota" style="margin-bottom:12px">${editar ? 'Editá nombres, precios (de lista; el de efectivo se calcula solo), orden y categorías. Los cortes tienen un único precio.' : 'Precio grande: tarjeta o cuotas. Efectivo y transferencia, con descuento.'}</p>
       <div class="srv-grid">${lista.map(tarjeta).join('')}</div>`;
   }

@@ -11,8 +11,9 @@ const Personal = (() => {
     el.onclick = onClick;
   }
 
-  function tarjeta(e) {
+  function tarjeta(e, i) {
     return `<div class="tarjeta" data-id="${e.id}">
+      <div class="emp-cab"><span class="av">${h((e.nombre || '?').trim().charAt(0).toUpperCase())}</span><div><small>FICHA #${String(i + 1).padStart(2, '0')}</small><b class="${e.activo ? '' : 'off'}">${e.activo ? 'Activa' : 'Inactiva'}</b></div></div>
       <label class="cam" style="margin-top:0">Nombre</label><input type="text" data-f="nombre" value="${h(e.nombre)}">
       <label style="display:block;margin:10px 0;font-size:13px"><input type="checkbox" data-f="activo" ${e.activo ? 'checked' : ''}> Activo</label>
             <label style="display:block;margin:0 0 10px;font-size:13px"><input type="checkbox" data-f="corte-def" ${e.id === defCorte ? 'checked' : ''}> Cortes por defecto a esta persona</label>
@@ -21,7 +22,7 @@ const Personal = (() => {
         <select data-f="modo-${c}"><option value="porcentaje" ${e.pagos[c].modo === 'porcentaje' ? 'selected' : ''}>Porcentaje (%)</option><option value="hora" ${e.pagos[c].modo === 'hora' ? 'selected' : ''}>Por hora ($)</option></select>
         <input type="number" min="0" step="any" data-f="valor-${c}" value="${e.pagos[c].valor}"></div>`).join('')}
       <p class="nota">Porcentaje: sobre el precio final cobrado. Por hora: horas reales × el valor de la hora.</p>
-      <button class="btn-verde" data-acc="guardar-emp" style="width:auto">Guardar</button></div>`;
+      <button class="btn-verde" data-acc="guardar-emp">Guardar</button></div>`;
   }
 
   function pintar() {
@@ -29,7 +30,7 @@ const Personal = (() => {
       <div class="tarjetas">${lista.map(tarjeta).join('')}
         <div class="tarjeta"><label class="cam" style="margin-top:0">Agregar empleado</label><input type="text" id="emp-nuevo" placeholder="Nombre">
           <p class="nota">Arranca con 40% en corte, nutri y otro; y color por hora (cargá el valor de la hora).</p>
-          <button class="btn-oro" data-acc="crear-emp">＋ Agregar</button></div></div>`;
+          <button class="btn-oro" data-acc="crear-emp">Agregar</button></div></div>`;
   }
 
   async function onClick(ev) {

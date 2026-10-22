@@ -76,9 +76,13 @@ const Cobrar = (() => {
 
   function renderIzq() {
     const paso = resolver();
+    
+    // Migas de pan formateadas exactamente como en la maqueta
     const migas = S.ruta.length
-      ? S.ruta.map((m, i) => `<button data-acc="miga" data-i="${i}">${h(m.label)}</button>`).join(' › ') + ` <button data-acc="reiniciar" style="margin-left:10px;color:var(--sec)">↺ Empezar de nuevo</button>`
+      ? S.ruta.map((m, i) => `<button data-acc="miga" data-i="${i}">${h(m.label)}</button>`).join(' <span class="sep">›</span> ') + 
+        ` <button data-acc="reiniciar">Empezar de nuevo</button>`
       : 'Elegí el primer paso';
+      
     let cuerpo = '';
     if (paso.tipo === 'opciones') {
       cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones">${paso.ops.map((o) =>
@@ -86,9 +90,16 @@ const Cobrar = (() => {
     } else if (paso.tipo === 'hoja') cuerpo = hojaHTML(paso);
     else cuerpo = otroHTML();
 
+    // Encabezado izquierdo con Título y Migas dentro del contenedor de la izquierda
     el.querySelector('#izq').innerHTML = `
-      <div class="cab"><div><div class="eyebrow">Nuevo cobro</div><h2>Armá el servicio</h2></div></div>
-      <div class="migas">${migas}</div>${cuerpo}`;
+      <div class="cobrar-izq-cab">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div class="eyebrow">Nuevo cobro</div>
+          <div class="migas-top-bar">${migas}</div>
+        </div>
+        <h1 style="margin:0;">Armá el servicio</h1>
+      </div>
+      <div class="hoja-contenedor-cards">${cuerpo}</div>`;
   }
 
   function selEmpleado(cat, valor, campo) {
@@ -115,17 +126,17 @@ const Cobrar = (() => {
       ${horasHTML(cat)}
       ${editar ? `<label class="cam">${v.desde ? 'Precio (desde — ajustalo)' : 'Precio final'}</label><input type="number" min="0" data-campo="b.precio" value="${h(S.b.precio || (v.desde ? precioDe(v, cat) : ''))}">`
         : `<div style="margin-top:10px"><button class="btn-lnk" data-acc="editar-precio">Cambiar precio</button></div>`}
-      <div style="margin-top:16px"><button class="btn-verde" style="width:auto" data-acc="sumar" data-v="${v.id}" data-cat="${cat}" data-desde="${v.desde ? 1 : 0}" data-pre="${precioDe(v, cat)}">Sumar al cobro ＋</button></div></div>`;
+      <div style="margin-top:16px"><button class="btn-verde" data-acc="sumar" data-v="${v.id}" data-cat="${cat}" data-desde="${v.desde ? 1 : 0}" data-pre="${precioDe(v, cat)}">Sumar al cobro</button></div></div>`;
   }
 
   function otroHTML() {
     return `<div class="hoja"><div class="eyebrow">Otro servicio</div><h3>Monto libre</h3>
       <label class="cam">Descripción</label><input type="text" data-campo="b.desc" value="${h(S.b.desc)}" placeholder="Ej: Peinado">
       <label class="cam">Monto (precio de lista)</label><input type="number" min="0" data-campo="b.monto" value="${h(S.b.monto)}">
-      <label style="display:block;margin-top:10px;font-size:13px"><input type="checkbox" data-campo="b.aplicarDesc" ${S.b.aplicarDesc ? 'checked' : ''}> Aplicar descuento por efectivo/transferencia</label>
+      <label style="display:block;margin-top:10px;font-size:12px"><input type="checkbox" data-campo="b.aplicarDesc" ${S.b.aplicarDesc ? 'checked' : ''}> Aplicar descuento por efectivo/transferencia</label>
       <label class="cam">Profesional</label>${selEmpleado('otro', S.b.emp, 'b.emp')}
       ${horasHTML('otro')}
-      <div style="margin-top:16px"><button class="btn-verde" style="width:auto" data-acc="sumar-otro">Sumar al cobro ＋</button></div></div>`;
+      <div style="margin-top:16px"><button class="btn-verde" data-acc="sumar-otro">Sumar al cobro</button></div></div>`;
   }
 
   function renderDer() {
@@ -134,6 +145,7 @@ const Cobrar = (() => {
     const opciones = K.config.cuotas_opciones;
     const optsEmp = (sel) => `<option value="">Sin asignar</option>${K.empleados.map((e) => `<option value="${e.id}" ${String(e.id) === String(sel ?? '') ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}`;
     const nomEmp = (id) => K.empleados.find((e) => String(e.id) === String(id))?.nombre || 'Sin asignar';
+    
     const lineas = S.servicios.length ? S.servicios.map((l, i) => {
       const x = c?.servicios?.[i];
       const nombre = x?.recorrido || l.descripcion || 'Servicio';
@@ -150,30 +162,53 @@ const Cobrar = (() => {
         <div class="acc"><button class="btn-lnk" data-acc="precio-linea" data-i="${i}">Editar precio</button><button class="btn-lnk" data-acc="quitar" data-i="${i}">Quitar</button></div></div>`;
     }).join('') : `<div class="vacio">Todavía no hay servicios sumados.</div>`;
 
-    const scroll = el.querySelector('#der .lineas')?.scrollTop || 0;
+    const scroll = el.querySelector('#der .res-top')?.scrollTop || 0;
+    
     el.querySelector('#der').innerHTML = `
       <div class="res-top">
-        <div class="res-cab"><h2>Resumen del cobro</h2><span class="badge">${S.servicios.length ? 'En preparación' : 'Nuevo'}</span></div>
-        <label class="fechachica">Fecha del cobro <input type="date" data-campo="fecha" value="${S.fecha || hoyISO()}" max="${hoyISO()}"></label>
-        <div class="clienta"><span>${S.cliente ? `<b>${h(S.cliente.nombre)}</b>${S.cliente.nuevo ? ' (nueva)' : ''}${S.ficha ? ' · con ficha' : ''}` : 'Sin clienta asociada'}</span>
-          <button class="mas" data-acc="clienta" title="Asociar clienta y ficha">＋</button></div>
-        <div class="metodos"><button class="met ${S.metodo === 'efectivo' ? 'on' : ''}" data-acc="metodo" data-m="efectivo">Efectivo / transferencia</button>
+        <div class="res-cab">
+          <h2>Resumen del cobro</h2>
+          <div style="display:flex; gap:8px; align-items:center;">
+            ${S.servicios.length ? `<button class="btn-lnk" data-acc="limpiar-ticket" style="font-size:11px; color:var(--cor);">Limpiar ticket</button>` : ''}
+            <span class="badge">${S.servicios.length ? 'En preparación' : 'Nuevo'}</span>
+          </div>
+        </div>
+        
+        <div class="fila-fecha-clienta">
+          <label class="fechachica">Fecha del cobro <input type="date" data-campo="fecha" value="${S.fecha || hoyISO()}" max="${hoyISO()}"></label>
+          <div>
+            <label class="fechachica" style="margin-bottom:4px;">Clienta</label>
+            <div class="clienta-compacta">
+              <span>${S.cliente ? `<b>${h(S.cliente.nombre)}</b>` : 'Sin clienta'}</span>
+              <button class="mas" data-acc="clienta" title="Asociar clienta">＋</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="metodos"><button class="met ${S.metodo === 'efectivo' ? 'on' : ''}" data-acc="metodo" data-m="efectivo">Efectivo / transf.</button>
           <button class="met ${S.metodo === 'tarjeta' ? 'on' : ''}" data-acc="metodo" data-m="tarjeta">Cuotas</button></div>
-        ${S.metodo === 'tarjeta' ? `<select data-campo="cuotas">${opciones.map((n) => `<option value="${n}" ${n === S.cuotas ? 'selected' : ''}>${n === 1 ? '1 cuota' : n + ' cuotas sin interés'}</option>`).join('')}</select>` : ''}
+        ${S.metodo === 'tarjeta' ? `<select data-campo="cuotas" style="margin-bottom:6px;">${opciones.map((n) => `<option value="${n}" ${n === S.cuotas ? 'selected' : ''}>${n === 1 ? '1 cuota' : n + ' cuotas sin interés'}</option>`).join('')}</select>` : ''}
+        
         <div class="sena"><label><input type="checkbox" data-campo="sena" ${S.sena ? 'checked' : ''}> Tenía seña</label>
           <input type="number" min="0" data-campo="senaMonto" value="${S.senaMonto}" ${S.sena ? '' : 'disabled'}></div>
+        
         ${S.error ? `<div class="err">${h(S.error)}</div>` : ''}
-        ${c?.horas_pendientes ? `<div class="aviso">Faltan cargar las horas de ${c.horas_pendientes} servicio(s). Podés guardarlas después, pero no se podrá cerrar la caja hasta completarlas.</div>` : ''}
-        <div class="tot">${dto > 0 ? `<div class="dto"><span>Descuento efectivo ${K.config.descuento_efectivo_pct}%</span><span>− ${peso(dto)}</span></div>` : ''}
-          <div><span>Total del cobro</span><span>${peso(c?.total)}</span></div>
-          <div><span>Seña</span><span>− ${peso(c?.sena)}</span></div>
-          ${c?.pago_empleados ? `<div style="color:var(--sec)"><span>Pago al personal (informativo)</span><span>${peso(c.pago_empleados)}</span></div>` : ''}</div>
+        ${c?.horas_pendientes ? `<div class="aviso">Faltan cargar las horas de ${c.horas_pendientes} servicio(s).</div>` : ''}
+        
+        <div class="tot">
+          <div><span>Total servicios bruta</span><span>${peso(c?.total ? c.total + dto + (c?.sena || 0) : 0)}</span></div>
+          ${dto > 0 ? `<div class="dto-row"><span class="dto-lbl">Descuento efectivo ${K.config.descuento_efectivo_pct}%</span><span>- ${peso(dto)}</span></div>` : ''}
+          ${(c?.sena || 0) > 0 ? `<div class="sena-row"><span class="sena-lbl">Seña descontada</span><span>- ${peso(c.sena)}</span></div>` : ''}
+        </div>
+        
         <div class="saldo"><span>Saldo a cobrar</span><b>${peso(c?.saldo)}</b></div>
-        <button class="btn-verde" data-acc="guardar" ${S.servicios.length && !S.guardando && !S.error ? '' : 'disabled'}>Cobrar y guardar →</button>
+        <button class="btn-verde" data-acc="guardar" ${S.servicios.length && !S.guardando && !S.error ? '' : 'disabled'}>Cobrar y guardar</button>
       </div>
-      <div class="res-serv">Servicios del cobro${S.servicios.length ? ` (${S.servicios.length})` : ''}</div>
+      
+      <div class="res-serv">Servicios del cobro ${S.servicios.length ? `(${S.servicios.length})` : ''}</div>
       <div class="lineas">${lineas}</div>`;
-    const nl = el.querySelector('#der .lineas'); if (nl) nl.scrollTop = scroll;
+      
+    const rt = el.querySelector('#der .res-top'); if (rt) rt.scrollTop = scroll;
   }
 
   // ---------- cálculo en el servidor ----------
@@ -193,6 +228,7 @@ const Cobrar = (() => {
     elegir: (d) => { S.ruta.push({ clave: d.clave, label: d.label }); S.b = bVacio(); renderIzq(); },
     miga: (d) => { S.ruta = S.ruta.slice(0, Number(d.i) + 1); S.b = bVacio(); renderIzq(); },
     reiniciar: () => { S.ruta = []; S.b = bVacio(); renderIzq(); },
+    'limpiar-ticket': () => { S.servicios = []; S.ruta = []; S.b = bVacio(); calcular(); },
     'editar-precio': () => { S.b.editar = true; renderIzq(); },
     sumar: (d) => {
       const emp = S.b.emp === null ? empDefault(d.cat) : S.b.emp;
@@ -238,7 +274,6 @@ const Cobrar = (() => {
     calcular();
   }
 
-
   function onClick(ev) {
     const b = ev.target.closest('[data-acc]');
     if (b && acciones[b.dataset.acc]) acciones[b.dataset.acc](b.dataset);
@@ -257,17 +292,18 @@ const Cobrar = (() => {
       if (k === 'emp') l.empleado_id = val === '' ? null : Number(val);
       if (k === 'horas') { if (val === '') delete l.horas; else l.horas = Number(val); }
       calcular();
-    } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); }
+    } else if (campo === 'cuotas') { S.cuotas = Number(val); calcular(); }
     else if (campo === 'sena') { S.sena = val; calcular(); }
     else if (campo === 'senaMonto') { S.senaMonto = Number(val) || 0; calcular(); }
     else if (campo === 'fecha') { S.fecha = val; renderDer(); }
   }
-  function onInput(ev) {      // texto libre del formulario "Otro": se guarda sin volver a dibujar (no pierde el foco)
+
+  function onInput(ev) {
     const campo = ev.target.dataset.campo;
     if (campo === 'b.desc' || campo === 'b.monto' || campo === 'b.horas' || campo === 'b.precio') S.b[campo.slice(2)] = ev.target.value;
   }
 
-  // ---------- clienta y ficha (panel lateral) ----------
+  // ---------- clienta y ficha ----------
   function abrirClienta() {
     const d = $('#drawer');
     d.innerHTML = `<div><h2 style="font-size:26px">Clienta y ficha</h2><p class="nota">Es opcional: se puede cobrar sin clienta. Una clienta nueva se crea recién al tocar «Listo».</p>
@@ -279,7 +315,7 @@ const Cobrar = (() => {
     const mostrar = (c) => { $('#cl-contacto', d).hidden = !c?.nuevo; };
     selectorClienta($('#cl-combo', d), { valor: S.cliente, diferir: true, onCambio: (c) => { S.cliente = c; mostrar(c); } });
     mostrar(S.cliente);
-    // al cerrar se conservan la ficha y las notas; una clienta nueva sin confirmar con «Listo» no se crea
+    
     d.alCerrar = () => { S.ficha = $('#cl-ficha', d).value.trim(); S.notas = $('#cl-notas', d).value.trim(); if (S.cliente?.nuevo) S.cliente = null; renderDer(); };
     $('#cl-ok', d).onclick = async () => {
       try {
@@ -293,12 +329,12 @@ const Cobrar = (() => {
     d.hidden = false;
   }
 
-
   // ---------- montaje ----------
   async function montar(contenedor) {
     el = contenedor;
     await cargar();
-    el.innerHTML = `<div class="cobrar"><div class="panel" id="izq"></div><div class="panel der" id="der"></div></div>`;
+    // Se elimina el contenedor superior #cab para permitir que las dos columnas del grid compartan la misma altura inicial
+    el.innerHTML = `<div class="cobrar"><div id="izq" class="cobrar-izq"></div><div class="panel der" id="der"></div></div>`;
     el.onclick = onClick; el.onchange = onChange; el.oninput = onInput;
     await calcular(); render();
   }
