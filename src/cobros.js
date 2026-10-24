@@ -183,7 +183,7 @@ router.post('/', (req, res) => {
 router.get('/', (req, res) => {
   const desde = normalizarFecha(req.query.desde) || '0000-01-01 00:00:00';
   const hasta = normalizarFecha(req.query.hasta, true) || '9999-12-31 23:59:59';
-  const cobros = db.prepare(`SELECT t.id, t.fecha, t.metodo_cobro, t.cuotas, t.total, t.sena, t.anulado, t.cierre_id,
+  const cobros = db.prepare(`SELECT t.id, t.fecha, t.metodo_cobro, t.cuotas, t.total, t.sena, t.anulado, t.cierre_id, t.cliente_id,
       c.nombre AS clienta FROM turno t LEFT JOIN cliente c ON c.id = t.cliente_id
       WHERE t.fecha BETWEEN ? AND ? ORDER BY t.fecha DESC, t.id DESC`).all(desde, hasta);
   const ls = db.prepare(`SELECT ts.id, ts.turno_id, ts.recorrido, ts.precio_cobrado, ts.pago_modo, ts.horas, e.nombre AS empleado

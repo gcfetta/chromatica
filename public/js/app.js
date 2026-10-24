@@ -12,7 +12,7 @@ const App = (() => {
   }
 
   function pintarNav() {
-    $('#nav').innerHTML = VISTAS.map(([k, t, i]) => `<button class="nav-item ${k === actual ? 'on' : ''}" data-vista="${k}">${h(t)}</button>`).join('');
+    $('#nav').innerHTML = VISTAS.map(([k, t, i]) => `<button class="nav-item${k === 'clientas' ? ' sub' : ''}${k === actual ? ' on' : ''}" data-vista="${k}">${h(t)}</button>`).join('');
   }
 
   async function ir(vista) {
@@ -35,31 +35,7 @@ const App = (() => {
 
   function sesionVencida() { $('#app').hidden = true; mostrarLogin(); }
 
-  async function mostrarLogin() {
-    const { configurado } = await api('GET', '/api/auth/estado');
-    const L = $('#login'); L.hidden = false;
-    L.innerHTML = `<div class="caja"><div class="monograma">CH</div><h1>CHROMATICA</h1>
-      <p>${configurado ? 'Ingresá para continuar' : 'Primera vez: creá tu usuario'}</p>
-      <form id="f-login"><input type="text" id="l-usuario" placeholder="Usuario" autocomplete="username" required>
-        <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" required>
-        ${configurado ? '' : '<input type="email" id="l-mail" placeholder="Mail de la peluquería (para recuperar el acceso)" required>'}
-        <div id="l-msg" class="err" hidden></div><button class="btn-verde" type="submit">${configurado ? 'Ingresar' : 'Crear usuario'}</button></form>
-      ${configurado ? '<p style="margin-top:14px"><button class="btn-lnk" id="l-olvide">Olvidé mi usuario o contraseña</button></p>' : ''}</div>`;
-    const msg = (t, ok) => { const m = $('#l-msg'); m.hidden = !t; m.textContent = t || ''; m.style.cssText = ok ? 'background:#e4efe8;color:var(--verde);border-color:var(--ok)' : ''; };
-    $('#f-login').onsubmit = async (ev) => {
-      ev.preventDefault();
-      try {
-        const usuario = $('#l-usuario').value, password = $('#l-pass').value;
-        if (!configurado) await api('POST', '/api/auth/setup', { usuario, password, mail: $('#l-mail').value });
-        await api('POST', '/api/auth/login', { usuario, password });
-        mostrarApp();
-      } catch (e) { msg(e.message); }
-    };
-    $('#l-olvide')?.addEventListener('click', async () => {
-      try { const r = await api('POST', '/api/auth/recuperar'); msg(`Te enviamos el usuario y una contraseña temporal a ${r.enviado_a}`, true); }
-      catch (e) { msg(e.message); }
-    });
-  }
+function mostrarLogin(paso) { Acceso.mostrar({ paso, alEntrar: mostrarApp }); }
 
   async function iniciar() {
     ['modal', 'drawer'].forEach((id) => $('#' + id).addEventListener('mousedown', (ev) => { if (ev.target.id === id) cerrarCapa($('#' + id)); }));
@@ -69,7 +45,7 @@ const App = (() => {
     document.addEventListener('click', async (ev) => {
       if (ev.target.closest('[data-acc="salir"]')) { await api('POST', '/api/auth/logout').catch(() => {}); sesionVencida(); }
     });
-    try { await api('GET', '/api/auth/yo'); mostrarApp(); }
+    try { const yo = await api('GET', '/api/auth/yo'); if (yo.debe_cambiar) mostrarLogin('nueva'); else mostrarApp(); }
     catch (e) { if (e.status === 401) { /* ya mostró el login */ } else mostrarLogin(); }
   }
 

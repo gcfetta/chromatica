@@ -770,3 +770,410 @@ td.sin{color:var(--mut);font-style:italic}
 /* ---------- Barra superior reducida a la mitad ---------- */
 .top{height:32px;padding:0 32px}
 .vista{padding-top:12px}
+
+/* ===== Layout fijo: barra lateral estática y scroll solo dentro del contenido ===== */
+html,body{height:100%;overflow:hidden}
+.app{height:100vh;height:100dvh;grid-template-rows:minmax(0,1fr);overflow:hidden}
+.side{height:100%;min-height:0;overflow:hidden;padding:20px 16px}
+.main{height:100%;min-height:0;overflow:hidden}
+.vista{min-height:0}
+nav{min-height:0}
+.nav-item{position:relative}
+.nav-item.on::after{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:20px;border-radius:4px;background:#f4875a}
+.nav-item.sub{width:calc(100% - 18px);margin-left:18px;padding:8px 16px;font-size:13px;font-weight:500}
+.nav-item.sub.on{font-weight:700}
+.login{height:100vh;height:100dvh;min-height:0;overflow:auto}
+@media (max-height:720px){.logo{padding-bottom:12px}.nav-item{padding:8px 16px}.side{padding:14px 16px}}
+
+/* ===== Acceso y cuenta ===== */
+.login .aviso,.aviso-cuenta{background:#e4efe8;color:var(--verde);padding:10px 14px;border-radius:12px;font-size:12px;margin:0 0 4px}
+.login .nota{margin:0}
+.err.ok{background:#e4efe8;color:var(--verde)}
+.cuenta-form{display:grid;gap:10px;max-width:360px;margin-top:12px}
+
+/* ===== Copias ===== */
+.ruta-sync{margin:10px 0 4px;padding:10px 14px;background:var(--mint);border-radius:14px;font-size:12px;font-weight:600;word-break:break-all}
+.fila-arch{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px}
+.arch-nombre{font-size:13px;font-weight:600;margin-right:10px}
+.cab-lista{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--mint);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--ink2)}
+.seg button small{opacity:.7;margin-left:4px}
+.seg button.on{background:var(--pri);color:#fff}
+.pager-cp{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:6px}
+.pag-n{font-size:12px;font-weight:600}
+.pag-btn{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:50%;background:var(--mint);color:var(--pri)}
+.pag-btn:hover:not(:disabled){background:var(--mint3)}
+.pag-btn:disabled{opacity:.35;cursor:not-allowed}
+.explo-atajos{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.explo-ruta{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:600;word-break:break-all;margin-bottom:6px}
+.explo-lista{max-height:32vh;display:flex;flex-direction:column;gap:2px;background:var(--mint);border-radius:16px;padding:6px}
+.explo-lista button{display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:9px 12px;border-radius:12px;font-size:13px;font-weight:600;color:var(--ink)}
+.explo-lista button:hover{background:#fff}
+.explo-pie{display:flex;justify-content:flex-end;align-items:center;gap:18px;margin-top:16px}
+
+/* ===== Personal ===== */
+.tarjetas>.tarjeta.nueva{order:-1}
+.tarjeta.inactiva{opacity:.55;filter:grayscale(1)}
+.tarjeta.inactiva:hover{opacity:.9;filter:none}
+.emp-del{display:block;margin:14px auto 0;color:#c8003a}
+.emp-del:disabled{opacity:.35;cursor:not-allowed}
+.off-cab{display:flex;align-items:center;gap:14px;margin:32px 0 14px}
+.off-cab h3{margin:0}
+.off-cab small{font-family:inherit;font-size:12px;color:var(--mut);margin-left:6px}
+
+/* ===== Asociar turnos a una clienta ===== */
+.turnos-con-mas{display:flex;align-items:center;gap:12px}
+.btn-mas{width:34px;height:34px;border-radius:50%;border:0;background:var(--mint3);color:var(--pri);font-size:22px;line-height:1;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-mas:hover{background:var(--pri);color:#fff}
+.modal>div.asoc{width:min(1100px,96vw)}
+.asoc-barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0}
+.asoc-barra input[type=date]{height:40px;border-radius:999px;border:0;background:var(--mint);padding:0 14px;font:inherit;font-weight:600}
+.asoc-grid{display:grid;gap:10px;max-height:50vh;overflow:auto;grid-template-columns:repeat(7,minmax(140px,1fr))}
+.asoc-grid.dia{grid-template-columns:1fr}
+.asoc-dia{background:var(--mint);border-radius:18px;padding:10px;min-width:0}
+.asoc-dia.sel{outline:2px solid var(--pri)}
+.asoc-dia h4{margin:0 0 8px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)}
+.asoc-vacio{font-size:12px;color:var(--mut)}
+.asoc-cobro{background:#fff;border-radius:14px;padding:10px;margin-bottom:8px;font-size:12px}
+.asoc-cobro.off{opacity:.5}
+.ac-top{display:flex;justify-content:space-between;font-weight:700}
+.asoc-cobro ul{margin:6px 0;padding-left:16px}
+.ac-pie{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--ink2)}
+
+/* =========================================================
+   SIDEBAR · estilo "panel flotante oscuro"
+   (pegar al final de app.css)
+   ========================================================= */
+
+/* --- Panel: más oscuro, flotante y con esquinas redondeadas --- */
+.app{grid-template-columns:292px minmax(0,1fr)}
+.side{
+  background:#0a2a1d;
+  margin:12px 0 12px 12px;
+  height:auto;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.06);
+  padding:24px 16px 20px;
+  box-shadow:0 10px 30px rgba(2,43,30,.25);
+  overflow:hidden;
+}
+
+/* --- Logo: monograma con aro verde + destello amarillo --- */
+.logo{gap:12px;padding:0 6px 30px}
+.monograma{
+  position:relative;
+  width:44px;height:44px;
+  background:rgba(0,134,78,.18);
+  border:2px solid var(--pri2);
+  color:var(--pri-dim);
+  font-size:17px;
+}
+.monograma::after{
+  content:'';
+  position:absolute;top:-7px;right:-7px;
+  width:15px;height:15px;
+  background:#fbbf24;
+  -webkit-mask:var(--i-spark) center/contain no-repeat;
+          mask:var(--i-spark) center/contain no-repeat;
+}
+.logo b{font-size:15px;letter-spacing:.1em;color:#fff}
+.logo small{
+  font-size:10px;font-weight:700;letter-spacing:.14em;
+  color:rgba(223,246,234,.85);
+  white-space:normal;           /* permite que baje a 2 líneas */
+  max-width:120px;line-height:1.35;margin-top:3px;
+}
+
+/* --- Items del menú: pastilla menos redonda --- */
+nav{gap:6px}
+.nav-item{
+  gap:14px;
+  padding:12px 16px;
+  border-radius:12px;
+  font-size:14px;font-weight:600;
+  color:#fff;
+}
+.nav-item:hover{background:rgba(255,255,255,.07)}
+.nav-item.on{
+  background:var(--pri2);
+  box-shadow:none;
+}
+.nav-item.on::after{left:3px;height:22px;background:#f4875a}
+
+/* Sub-item (Clientas) indentado y sin pastilla propia */
+.nav-item.sub{
+  width:calc(100% - 28px);
+  margin-left:28px;
+  padding:9px 16px;
+  font-size:14px;font-weight:600;
+}
+
+/* --- Cerrar sesión: botón con borde + ondas decorativas --- */
+.salir-wrap{
+  position:relative;
+  margin:auto -16px -20px;        /* ocupa todo el ancho del panel */
+  padding:64px 24px 22px;
+  border-radius:0;
+  overflow:hidden;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 110' preserveAspectRatio='none' fill='none'%3E%3Cpath d='M-5,70 C30,45 60,85 105,75 S175,40 225,55' stroke='%23d4b83a' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+}
+/* garabato coral (izquierda) */
+.salir-wrap::before{
+  content:'';position:absolute;z-index:2;pointer-events:none;
+  left:16px;bottom:8px;width:36px;height:26px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26' fill='none' stroke='%23d9694f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3,22 L9,8 L15,20 L21,6 L27,18 L33,9 L37,14'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+/* rayitas violetas (derecha) */
+.salir-wrap::after{
+  content:'';position:absolute;z-index:2;pointer-events:none;
+  right:12px;bottom:6px;width:28px;height:44px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 44' fill='none' stroke='%238b6fd6' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M12,6 L24,2'/%3E%3Cpath d='M3,40 L13,34'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.nav-item.salir{
+  background:rgba(10,42,29,.55);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:12px;
+  padding:13px 18px;
+  backdrop-filter:none;
+}
+.nav-item.salir:hover{background:var(--cor);border-color:var(--cor);color:#fff}
+
+/* --- Pantallas bajas: compactar --- */
+@media (max-height:720px){
+  .side{padding:16px 14px 14px}
+  .logo{padding-bottom:14px}
+  .nav-item{padding:9px 14px}
+  .salir-wrap{padding-top:40px}
+}
+
+/* ===== Línea degradada bajo la fecha ===== */
+.top{position:relative}
+.top::after{
+  content:'';
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:2px;                      /* más finita que la de las tarjetas (5px) */
+  background:linear-gradient(90deg,var(--pri),var(--pri-fix) 60%,#fe7488);
+  pointer-events:none;
+}
+
+/* Subtítulo del logo en una sola línea */
+.logo small{
+  white-space:nowrap;
+  max-width:none;
+  letter-spacing:.12em;   /* un poco más compacto para que entre cómodo */
+}
+
+/* =========================================================
+   LOGIN · fondo verde oscuro + tarjeta color del sistema
+   (reemplaza el bloque anterior del login)
+   ========================================================= */
+
+/* --- Fondo de la pantalla: verde con degradado --- */
+.login{
+  background:
+    radial-gradient(circle at 85% 10%,rgba(0,134,78,.45),transparent 50%),
+    radial-gradient(circle at 10% 95%,rgba(0,106,61,.25),transparent 45%),
+    #0a2a1d;
+}
+
+/* --- Tarjeta: color de fondo del sistema + línea degradada arriba --- */
+.login .caja{
+  position:relative;
+  overflow:hidden;
+  background:var(--canvas);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px;
+  padding:40px 40px 68px;
+  box-shadow:0 24px 60px rgba(0,0,0,.45);
+}
+.login .caja>*{position:relative;z-index:1}
+
+.login .caja::before{
+  content:'';
+  position:absolute;z-index:2;
+  left:0;right:0;top:0;height:3px;
+  background:linear-gradient(90deg,var(--pri),var(--pri-fix) 60%,#fe7488);
+}
+
+/* ondas decorativas inferiores */
+.login .caja::after{
+  content:'';
+  position:absolute;z-index:0;pointer-events:none;
+  left:0;right:0;bottom:0;height:64px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 26' fill='none' stroke='%23d9694f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3,22 L9,8 L15,20 L21,6 L27,18 L33,9 L37,14'/%3E%3C/svg%3E") left 22px bottom 12px/36px 26px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 44' fill='none' stroke='%238b6fd6' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M12,6 L24,2'/%3E%3Cpath d='M3,40 L13,34'/%3E%3C/svg%3E") right 20px bottom 8px/28px 44px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 110' preserveAspectRatio='none' fill='none'%3E%3Cpath d='M-5,70 C30,45 60,85 105,75 S175,40 225,55' stroke='%23d4b83a' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+}
+
+/* --- Logo y textos --- */
+.login .monograma{color:var(--pri)}
+.login .monograma::after{width:20px;height:20px;top:-9px;right:-9px}
+.login h1{
+  font-family:var(--sans);
+  font-size:26px;font-weight:700;
+  letter-spacing:.14em;
+  color:var(--ink);
+}
+.login p{color:var(--mut)}
+
+/* --- Campos --- */
+.login label{color:var(--ink2);font-size:12px;font-weight:600}
+.login input{
+  height:46px;
+  padding:0 16px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--ink);
+  transition:border-color .2s,box-shadow .2s;
+}
+.login input::placeholder{color:var(--mut)}
+.login input:focus{
+  outline:0;
+  border-color:var(--pri2);
+  box-shadow:0 0 0 3px rgba(0,134,78,.15);
+}
+.login input:-webkit-autofill,
+.login input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--ink);
+  caret-color:var(--ink);
+  -webkit-box-shadow:0 0 0 100px #fff inset;
+  transition:background-color 9999s;
+}
+
+/* --- Botón y links --- */
+.login .btn-verde{
+  background:var(--pri2);
+  border-radius:12px;
+  box-shadow:none;
+}
+.login .btn-verde:hover{background:var(--pri)}
+.login .caja a{color:var(--pri);font-weight:600}
+.login .caja a:hover{color:var(--pri2)}
+
+/* --- Mensajes de aviso --- */
+.login .aviso{
+  background:#e4efe8;
+  color:var(--verde);
+  border:0;
+}
+
+/* =========================================================
+   LOGIN · refinamientos estéticos
+   (pegar al final de app.css)
+   ========================================================= */
+
+/* --- Fondo: resplandor extra detrás de la tarjeta --- */
+.login{
+  background:
+    radial-gradient(circle at 50% 50%,rgba(109,220,153,.10),transparent 38%),
+    radial-gradient(circle at 85% 10%,rgba(0,134,78,.45),transparent 50%),
+    radial-gradient(circle at 10% 95%,rgba(0,106,61,.25),transparent 45%),
+    #0a2a1d;
+}
+
+/* --- Tarjeta: más aire, degradado suave y halo --- */
+.login .caja{
+  width:min(420px,92vw);
+  padding:52px 44px 76px;
+  background:linear-gradient(180deg,#f6fffb 0%,var(--canvas) 100%);
+  border:0;
+  border-radius:32px;
+  box-shadow:
+    0 0 0 8px rgba(255,255,255,.05),
+    0 40px 90px rgba(0,0,0,.5);
+  animation:login-in .6s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes login-in{
+  from{opacity:0;transform:translateY(16px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion:reduce){.login .caja{animation:none}}
+
+/* La línea degradada deja el borde y pasa a ser un detalle bajo el título */
+.login .caja::before{display:none}
+.login h1::after{
+  content:'';display:block;
+  width:48px;height:3px;border-radius:3px;
+  margin:16px auto 0;
+  background:linear-gradient(90deg,var(--pri),var(--pri-fix) 60%,#fe7488);
+}
+
+/* --- Logo más grande, con halo --- */
+.login .monograma{
+  width:76px;height:76px;font-size:30px;
+  margin:0 auto 20px;
+  background:linear-gradient(145deg,rgba(0,134,78,.20),rgba(109,220,153,.38));
+  box-shadow:0 0 0 8px rgba(0,134,78,.07),0 10px 24px rgba(0,106,61,.18);
+}
+.login .monograma::after{width:22px;height:22px;top:-10px;right:-10px}
+
+/* --- Textos --- */
+.login h1{font-size:25px;letter-spacing:.16em;padding-left:.16em}
+.login p{margin:14px 0 26px;font-size:13px;color:var(--mut)}
+
+/* --- Campos con ícono --- */
+.login form{gap:12px}
+.login input{
+  height:48px;
+  padding:0 16px 0 46px;
+  font-family:var(--sans);font-size:14px;font-weight:500;
+  background-color:#fff;
+  background-repeat:no-repeat;
+  background-position:16px center;
+  background-size:18px 18px;
+  border:1px solid transparent;
+  border-radius:14px;
+  box-shadow:0 1px 2px rgba(2,43,30,.06),0 4px 14px rgba(2,43,30,.05);
+}
+.login input:not([type=password]){
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e7a70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+.login input[type=password]{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e7a70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+}
+.login input:focus{
+  border-color:var(--pri2);
+  box-shadow:0 0 0 4px rgba(0,134,78,.14);
+}
+/* autocompletado de Chrome sin tapar el ícono */
+.login input:-webkit-autofill,
+.login input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--ink);
+  -webkit-box-shadow:none;
+  transition:background-color 9999s ease-in-out 0s;
+}
+.login input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 4px rgba(0,134,78,.14);
+}
+
+/* --- Botón con degradado y leve elevación --- */
+.login .btn-verde{
+  height:50px;
+  margin-top:6px;
+  font-size:14px;letter-spacing:.02em;
+  background:linear-gradient(135deg,var(--pri),var(--pri2));
+  border-radius:14px;
+  box-shadow:0 10px 22px -6px rgba(0,106,61,.45);
+  transition:transform .2s,box-shadow .2s,filter .2s;
+}
+.login .btn-verde:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.06);
+  box-shadow:0 14px 26px -6px rgba(0,106,61,.5);
+}
+.login .btn-verde:active{transform:translateY(0)}
+
+/* --- Link --- */
+.login .caja a{
+  font-size:12px;
+  text-underline-offset:3px;
+}
+.login .caja a:hover{text-decoration:underline}
+
+/* --- Ondas inferiores un poco más altas y suaves --- */
+.login .caja::after{height:72px;opacity:.9}

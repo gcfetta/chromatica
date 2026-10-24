@@ -11,6 +11,7 @@ const { router: gananciasRouter } = require('./src/ganancias');
 const { router: copiasRouter, iniciarAuto } = require('./src/copias');
 const { router: serviciosRouter } = require('./src/servicios');
 const { ApiError, cfg } = require('./src/util');
+const { router: copiasExtraRouter } = require('./src/copias_extra');
 
 const app = express();
 app.use(express.json());
@@ -76,6 +77,7 @@ app.use('/api/movimientos', requireAuth, movimientosRouter);
 app.use('/api/cierres', requireAuth, cierresRouter);
 app.use('/api/cierres', requireAuth, cierresRouter);
 app.use('/api/ganancias', requireAuth, gananciasRouter);
+app.use('/api/copias', requireAuth, copiasExtraRouter);
 app.use('/api/copias', requireAuth, copiasRouter);
 
 // errores de validación -> JSON claro

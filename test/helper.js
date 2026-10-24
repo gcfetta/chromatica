@@ -7,7 +7,7 @@ const path = require('node:path');
 async function iniciar() {
   const DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatica-test-'));
   const PORT = 3900 + Math.floor(Math.random() * 90);
-  const env = { ...process.env, PELU_DATA: DIR, PORT: String(PORT), PELU_MAIL_TEST: '1' };
+  const env = { ...process.env, PELU_DATA=/tmp/, PORT: String(PORT), PELU_MAIL_TEST: '1' };
   const root = path.join(__dirname, '..');
   const BASE = `http://127.0.0.1:${PORT}`;
   let cookie = '';
@@ -36,8 +36,7 @@ async function iniciar() {
   }
 
   async function entrar() {
-    await api('POST', '/api/auth/setup', { usuario: 'admin', password: 'clave123', mail: 'a@b.com' });
-    await api('POST', '/api/auth/login', { usuario: 'admin', password: 'clave123' });
+    await api('POST', '/api/auth/setup', { mail: 'a@b.com', usuario: 'admin', password: 'clave123' });
     const serv = (await api('GET', '/api/servicios')).data;
     const vid = (nombre, etiqueta) => serv.find((s) => s.nombre === nombre && (!etiqueta || s.etiqueta === etiqueta)).variante_id;
     return { serv, vid };

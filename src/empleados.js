@@ -15,8 +15,12 @@ function cargar(id) {
   const e = db.prepare('SELECT id, nombre, activo FROM empleado WHERE id = ?').get(id);
   if (!e) return null;
   const filas = db.prepare('SELECT categoria, modo, valor FROM pago_empleado WHERE empleado_id = ?').all(id);
+  
+  const usos = db.prepare(`SELECT (SELECT COUNT(*) FROM turno_servicio WHERE empleado_id = ?) + (SELECT COUNT(*) FROM movimiento WHERE empleado_id = ?)
+    + (SELECT COUNT(*) FROM liquidacion WHERE empleado_id = ?) + (SELECT COUNT(*) FROM cierre_empleado WHERE empleado_id = ?) AS n`).get(id, id, id, id).n;
   return {
-    id: e.id, nombre: e.nombre, activo: e.activo,
+    id: e.id, nombre: e.nombre, activo: e.activo, con_historial: usos > 0,
+    
     pagos: Object.fromEntries(CATS.map((c) => {
       const f = filas.find((x) => x.categoria === c);
       return [c, f ? { modo: f.modo, valor: f.valor } : defecto(c)];
@@ -74,6 +78,21 @@ router.put('/:id', (req, res) => {
     audit('empleado', id, 'editar', { antes, cambios: req.body });
   })();
   res.json(cargar(id));
+});
+
+// Solo se borra si nunca tuvo turnos ni movimientos; si tiene historial, se desactiva
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const e = cargar(id);
+  if (!e) throw new ApiError(404, 'Empleado inexistente');
+  if (e.con_historial) throw new ApiError(409, 'Tiene turnos o movimientos asociados: no se puede eliminar, solo desactivar');
+  db.transaction(() => {
+    db.prepare('DELETE FROM pago_empleado WHERE empleado_id = ?').run(id);
+    db.prepare("DELETE FROM config WHERE clave = 'empleado_corte' AND valor = ?").run(String(id));
+    db.prepare('DELETE FROM empleado WHERE id = ?').run(id);
+    audit('empleado', id, 'eliminar', { nombre: e.nombre });
+  })();
+  res.json({ ok: true });
 });
 
 module.exports = { router, cargar };

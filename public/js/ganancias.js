@@ -80,15 +80,21 @@ const Ganancias = (() => {
   }
 
   // ---------- Movimientos ----------
-  async function movimientos() {
-    const [l, emps] = await Promise.all([api('GET', '/api/movimientos'), api('GET', '/api/empleados')]);
-    const NOM = { adelanto: 'Adelanto', gasto: 'Gasto', retiro: 'Retiro' };
+  const MV = { pag: 0 };   // página de la lista de movimientos (5 por página)
+    async function movimientos() {
+      const [l, emps] = await Promise.all([api('GET', '/api/movimientos'), api('GET', '/api/empleados')]);
+      const POR = 5, paginas = Math.max(1, Math.ceil(l.length / POR));
+      MV.pag = Math.min(MV.pag, paginas - 1);
+      const ver = l.slice(MV.pag * POR, MV.pag * POR + POR);
     return `<div class="panel" style="margin-bottom:16px"><div class="eyebrow">Nuevo movimiento</div>
       <div class="form-mov"><select id="mv-tipo" data-campo="mv-tipo"><option value="gasto">Gasto</option><option value="adelanto">Adelanto a empleado</option><option value="retiro">Retiro de la dueña</option></select>
         <select id="mv-emp" hidden>${emps.filter((e) => e.activo).map((e) => `<option value="${e.id}">${h(e.nombre)}</option>`).join('')}</select>
         <input type="number" min="0" id="mv-monto" placeholder="Monto"><input type="text" id="mv-concepto" placeholder="Concepto (opcional)"><button class="btn-oro" data-acc="mv-agregar">Agregar</button></div>
       <p class="nota">Los gastos restan ganancia; los adelantos se descuentan al empleado; los retiros no restan ganancia.</p></div>
-      <div class="panel">${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="r">Monto</th><th></th></tr>${l.map((m) => `<tr><td>${fdia(m.fecha)}</td><td><span class="tag t-${m.tipo}">${NOM[m.tipo]}${m.empleado ? ' · ' + h(m.empleado) : ''}</span></td><td>${h(m.concepto || '')}</td><td class="r">${peso(m.monto)}</td><td><button class="btn-lnk" data-acc="mv-anular" data-id="${m.id}">Anular</button></td></tr>`).join('')}</table>
+      <div class="panel">${l.length ? `<table class="tabla"><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="r">Monto</th><th></th></tr>${ver.map((m) => `<tr><td>${fdia(m.fecha)}</td><td><span class="tag t-${m.tipo}">${NOM[m.tipo]}${m.empleado ? ' · ' + h(m.empleado) : ''}</span></td><td>${h(m.concepto || '')}</td><td class="r">${peso(m.monto)}</td><td><button class="btn-lnk" data-acc="mv-anular" data-id="${m.id}">Anular</button></td></tr>`).join('')}</table>
+      <div class="pager-cp"><span class="nota" style="margin:0">${MV.pag * POR + 1}–${MV.pag * POR + ver.length} de ${l.length}</span>
+        <button class="chev" data-acc="mv-pag" data-d="-1" ${MV.pag === 0 ? 'disabled' : ''} title="Más recientes">‹</button>
+        <button class="chev" data-acc="mv-pag" data-d="1" ${MV.pag >= paginas - 1 ? 'disabled' : ''} title="Más antiguos">›</button></div>
       <p class="nota">Solo se muestran los movimientos sin cerrar.</p>` : '<p class="nota">No hay movimientos sin cerrar.</p>'}</div>`;
   }
 
@@ -142,10 +148,12 @@ const Ganancias = (() => {
     'h-mover': (d) => { moverHist(Number(d.d)); return pintar(); },
     'h-modo': (d) => { H.modo = d.m; [H.desde, H.hasta] = rangoHist(d.m, H.desde); return pintar(); },
     ver: (d) => Detalle.abrir(Number(d.id), () => { if (tab === 'historial') pintar(); }),
+    'mv-pag': (d) => { MV.pag += Number(d.d); return pintar(); },
     'mv-agregar': async () => {
       const tipo = $('#mv-tipo', el).value, monto = Number($('#mv-monto', el).value);
       if (!(monto > 0)) return toast('Cargá un monto', { error: true });
       await api('POST', '/api/movimientos', { tipo, monto, concepto: $('#mv-concepto', el).value, empleado_id: tipo === 'adelanto' ? Number($('#mv-emp', el).value) : null });
+      MV.pag = 0;
       estadoGuardado(true); toast('Movimiento agregado'); return pintar();
     },
     'mv-anular': (d, b) => doble(b, '¿Seguro?', async () => { await api('POST', `/api/movimientos/${d.id}/anular`, {}); toast('Movimiento anulado'); await pintar(); }),

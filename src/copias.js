@@ -55,12 +55,32 @@ function validar(archivo) {
     const tabla = t.prepare("SELECT 1 FROM sqlite_master WHERE name = 'turno'").get();
     if (ok !== 'ok' || !tabla) throw new ApiError(400, 'La copia está dañada o no es de Chromatica');
     if (v > VERSION_MAX) throw new ApiError(400, 'La copia es de una versión más nueva del sistema');
-  } finally { t.close(); }
+    } catch (e) { throw e instanceof ApiError ? e : new ApiError(400, 'La copia está dañada o no es de Chromatica'); }
+  finally { t.close(); }
 }
 
-router.get('/', (_req, res) => {
+const POR_PAGINA = 10;
+const FILTROS = {
+  importantes: (c) => c.motivo === 'manual' || c.motivo === 'cierre',
+  auto: (c) => c.motivo === 'auto',
+  todas: () => true,
+};
+const limpia = ({ t, ...x }) => x;
+
+router.get('/', (req, res) => {
+  const todas = listar();
+  const filtro = FILTROS[req.query.filtro] ? req.query.filtro : 'importantes';
+  const lista = todas.filter(FILTROS[filtro]);
+  const paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const pagina = Math.min(Math.max(parseInt(req.query.pagina, 10) || 1, 1), paginas);
   const c = carpetaSync();
-  res.json({ copias: listar().map(({ t, ...x }) => x), carpeta_sync: c, sync_ok: c ? sincronizable(c) : null });
+  res.json({
+    copias: lista.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA).map(limpia),
+    total: lista.length, pagina, paginas, filtro,
+    conteo: { importantes: todas.filter(FILTROS.importantes).length, auto: todas.filter(FILTROS.auto).length, todas: todas.length },
+    ultima: todas[0] ? limpia(todas[0]) : null,
+    carpeta_local: DIR, carpeta_sync: c, sync_ok: c ? sincronizable(c) : null,
+  });
 });
 
 router.post('/', (_req, res) => {
@@ -72,10 +92,17 @@ router.post('/', (_req, res) => {
 router.put('/config', (req, res) => {
   const c = String(req.body?.carpeta || '').trim();
   if (c && !sincronizable(c)) throw new ApiError(400, 'La carpeta no existe o no se puede escribir en ella');
-  if (c) db.prepare('INSERT INTO config(clave, valor) VALUES (?,?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor').run('carpeta_sync', c);
-  else db.prepare("DELETE FROM config WHERE clave = 'carpeta_sync'").run();
+  let copiadas = 0;
+  if (c) {
+    db.prepare('INSERT INTO config(clave, valor) VALUES (?,?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor').run('carpeta_sync', c);
+    // al elegir o cambiar la carpeta se suben también las copias que todavía no estén ahí
+    for (const x of listar()) {
+      const d = path.join(c, x.nombre);
+      if (!fs.existsSync(d)) { try { fs.copyFileSync(path.join(DIR, x.nombre), d); copiadas++; } catch { /* se reintenta en la próxima */ } }
+    }
+  } else db.prepare("DELETE FROM config WHERE clave = 'carpeta_sync'").run();
   audit('copia', null, 'carpeta', { carpeta: c || null });
-  res.json({ carpeta_sync: c || null });
+  res.json({ carpeta_sync: c || null, copiadas });
 });
 
 // CSV legible (separador ";" y BOM para que Excel en español lo abra bien)
@@ -114,4 +141,4 @@ router.post('/:nombre/restaurar', (req, res) => {
   res.json({ ok: true, copia_previa: pre.nombre });
 });
 
-module.exports = { router, crear, iniciarAuto };
+module.exports = { router, crear, iniciarAuto, validar, DIR };

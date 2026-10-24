@@ -35,7 +35,7 @@ const Clientas = (() => {
     const ver = visitas.slice(pag * POR_PAG, pag * POR_PAG + POR_PAG);
     const campo = (k, t, span, filas = 0) => `<div style="grid-column:span ${span}"><label class="cam">${t}</label>${filas ? `<textarea rows="${filas}" data-k="${k}">${h(c[k] || '')}</textarea>` : `<input type="text" data-k="${k}" value="${h(c[k] || '')}">`}</div>`;
     $('#cl-ficha', el).innerHTML = `<div class="panel cli-datos"><div class="cli-cab"><div><div class="eyebrow">Ficha</div><h2>${h(c.nombre)}</h2></div>
-        <div class="resumen-cli"><div><b>${validas.length}</b>turnos</div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
+        <div class="resumen-cli"><div class="turnos-con-mas"><button class="btn-mas" data-acc="asociar" title="Asociar turnos del historial">+</button><div><b>${validas.length}</b>turnos</div></div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
         <div class="cli-btns"><button class="btn-verde" data-acc="guardar">Guardar ficha</button>
           <button class="btn-lnk" data-acc="eliminar" ${visitas.length ? 'disabled title="Tiene turnos asociados: no se puede eliminar"' : ''}>Eliminar ficha</button></div></div>
       <div class="cli-campos">${campo('nombre', 'Nombre', 3)}${campo('contacto', 'Contacto', 3)}${campo('ficha', 'Ficha', 2, 2)}${campo('observacion', 'Observación', 2, 2)}${campo('notas_importantes', 'Notas importantes', 2, 2)}</div></div>
@@ -52,6 +52,7 @@ const Clientas = (() => {
       const a = b.dataset.acc;
       if (a === 'ver') await ficha(Number(b.dataset.id));
       else if (a === 'pag') { pag += Number(b.dataset.d); await ficha(sel, true); }
+      else if (a === 'asociar') Asociar.abrir(sel, $('[data-k="nombre"]', el).value, () => ficha(sel, true));
       else if (a === 'cobro') await Detalle.abrir(Number(b.dataset.id), () => ficha(sel, true));
       else if (a === 'nueva') {
         const nombre = ($('#cl-buscar', el).value || '').trim();
