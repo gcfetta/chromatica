@@ -87,14 +87,23 @@ const Cobrar = (() => {
     if (paso.tipo === 'opciones') {
             // tipo de paso: nivel (Plus/Premium…, con estrellas), largo/talle, o servicio (con precio o duración)
       const tipo = paso.titulo === 'Elegí el nivel' ? 'nivel' : paso.titulo === 'Elegí el largo o talle' ? 'largo' : 'servicio';
-      const niv = K.config.niveles || [];
+            const niv = K.config.niveles || [];
+      // Saca del nombre el prefijo que ya está en el título del paso (ej. "Retoque deco · " dentro de "Retoques deco")
+      const sinAcentos = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/\s+/).map((w) => w.replace(/s$/, '')).join(' ');
+      const acortar = (t) => {
+        const p = String(t).split(' · ');
+        if (p.length < 2) return t;
+        const a = sinAcentos(p[0]), b = sinAcentos(paso.titulo);
+        return (a === b || b.endsWith(' ' + a)) ? p.slice(1).join(' · ') : t;
+      };
       const card = (o) => {
         const i = niv.indexOf(o.t);
-        const est = tipo === 'nivel' && i >= 0 ? `<span class="est">${'★'.repeat(i + 1)}</span>` : '';
+        const est = i >= 0 ? `<span class="est">${'★'.repeat(i + 1)}</span>` : '';
         const cls = tipo === 'largo' && o.t.length > 13 ? ' ancho' : '';
-        return `<button class="op${cls}" ${tipo === 'nivel' ? `data-i="${Math.max(0, i)}"` : ''} data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}">${est}<b>${h(o.t)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`;
+        const nombre = tipo === 'servicio' ? acortar(o.t) : o.t;
+        return `<button class="op${cls}" ${tipo === 'nivel' ? `data-i="${Math.max(0, i)}"` : ''} data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}" title="${h(o.t)}">${est}<b>${h(nombre)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`;
       };
-      cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones ${tipo === 'nivel' ? 'tier' : tipo}">${paso.ops.map(card).join('')}</div></div>`;
+      cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones ${tipo === 'nivel' ? 'tier' : tipo}${paso.titulo === '¿Qué querés cobrar?' ? ' inicio' : ''}">${paso.ops.map(card).join('')}</div></div>`;
 
     } else if (paso.tipo === 'hoja') cuerpo = hojaHTML(paso);
     else cuerpo = otroHTML();

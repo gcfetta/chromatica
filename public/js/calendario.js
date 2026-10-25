@@ -45,10 +45,24 @@ const Calendario = (() => {
   }
 
   document.addEventListener('mousedown', (ev) => {
+  const esFecha = (t) => t?.matches?.('input[type=date]') && !t.disabled;
+
+  // Anula el selector nativo del navegador
+  try { HTMLInputElement.prototype.showPicker = function () {}; } catch (_) {}
+
+  document.addEventListener('mousedown', (ev) => {
     const t = ev.target;
     if (t.closest?.('.cal-pop')) return;
-    if (t.matches?.('input[type=date]') && !t.disabled) { ev.preventDefault(); inp === t ? cerrar() : abrir(t); }
+    if (esFecha(t)) { ev.preventDefault(); inp === t ? cerrar() : abrir(t); }
     else cerrar();
+  }, true);
+
+  // El nativo se abre en "click": hay que frenarlo también ahí
+  document.addEventListener('click', (ev) => { if (esFecha(ev.target)) ev.preventDefault(); }, true);
+
+  // Teclado: Enter / Espacio / flecha abajo abren el propio, no el nativo
+  document.addEventListener('keydown', (ev) => {
+    if (esFecha(ev.target) && ['Enter', ' ', 'ArrowDown'].includes(ev.key)) { ev.preventDefault(); abrir(ev.target); }
   }, true);
 
   document.addEventListener('click', (ev) => {

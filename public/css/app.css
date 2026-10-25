@@ -1295,24 +1295,331 @@ input[type=date]::-webkit-calendar-picker-indicator>*{display:none}
 .av{display:grid;place-items:center;flex:none;border-radius:50%;background:linear-gradient(145deg,var(--mint3),#bff0d4);color:var(--pri);font-family:var(--serif);font-weight:700}
 .av.grande{width:64px;height:64px;font-size:28px;box-shadow:0 0 0 5px rgba(0,106,61,.07)}
 
-.cli-datos{padding:26px 30px 24px}
-.cli-cab{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"id btns" "stats btns";gap:14px 20px;align-items:center;padding-right:44px}
-.cli-id{grid-area:id;display:flex;align-items:center;gap:18px}
-.cli-id>div{min-width:0}
-.cli-id h2{font-size:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.resumen-cli{grid-area:stats;gap:12px}
-.cli-btns{grid-area:btns}
-.resumen-cli>div{min-width:84px;padding:8px 14px;border-radius:18px;background:var(--mint);text-align:center}
-.resumen-cli>div:nth-child(2){background:#fff7d6}
-.resumen-cli>div b{font-size:24px}
-.resumen-cli>div:nth-child(2) b{color:#854d0e}
-.cli-campos{gap:14px 16px;margin-top:20px;padding-top:20px}
-.cli-campos .cmp{position:relative}
-.cli-campos label.cam{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:10.5px;letter-spacing:.05em;white-space:nowrap}
-.cli-campos .cmp.amb,.cli-campos .cmp.ver,.cli-campos .cmp.ros{padding:12px 14px 14px;border-radius:20px}
-.cli-campos .cmp.amb{background:#fff8dc}.cli-campos .cmp.ver{background:#e4f8ec}.cli-campos .cmp.ros{background:#ffeef2}
-.cli-campos .cmp.amb label.cam::before,.cli-campos .cmp.ver label.cam::before,.cli-campos .cmp.ros label.cam::before{content:'';width:8px;height:8px;border-radius:50%;background:#f59e0b}
-.cli-campos .cmp.ver label.cam::before{background:var(--pri2)}
-.cli-campos .cmp.ros label.cam::before{background:var(--coral)}
-.cli-campos .cmp textarea{background:rgba(255,255,255,.75);border-radius:14px;min-height:92px}
-.cli-campos .cmp textarea:focus{background:#fff}
+/* =========================================================
+   FIXES · cobrar (layout fijo), cards, nivel, ficha de clienta
+   ========================================================= */
+
+/* ---------- COBRAR: alto = alto de pantalla, el ticket no se baja ---------- */
+.vista:has(.cobrar){overflow:hidden;display:flex;flex-direction:column;padding-bottom:24px}
+.vista:has(.cobrar) .cobrar{flex:1;min-height:0;height:100%;align-items:stretch;grid-template-rows:minmax(0,1fr)}
+.cobrar-izq{min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 8px 12px 2px}
+.panel.der{position:relative;top:auto;height:100%;max-height:none}
+.res-top{flex:0 1 auto;min-height:0;max-height:none}
+
+@media (max-width:1180px){
+  .vista:has(.cobrar){overflow:auto}
+  .vista:has(.cobrar) .cobrar{height:auto}
+  .cobrar-izq{overflow:visible}
+  .panel.der{height:auto;max-height:none}
+}
+
+/* ---------- Cards de servicio (Retoques deco, etc.) ---------- */
+.op{font-family:inherit;color:var(--ink);cursor:pointer}
+.opciones.servicio{grid-auto-rows:auto;align-items:stretch}
+.opciones.servicio .op{min-height:84px;padding:14px 16px;justify-content:flex-start}
+.opciones.servicio .op b{font-size:15px;line-height:1.3;padding-right:22px;overflow-wrap:anywhere;word-break:normal;hyphens:auto}
+.opciones.servicio .op .pr{margin-top:auto;font-size:17px}
+.opciones.servicio .op small{font-size:11px}
+.opciones:not(.tier):not(.largo) .op b{font-size:16px;line-height:1.3}
+
+/* ---------- NIVEL (Plus / Premium): mismo estilo que la barra lateral ---------- */
+.opciones.tier{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.op[data-i]{
+  --ta:#6ee7a1; --tb:#bbf7d0;
+  background:var(--side,#08281c);color:#fff;border:0;border-radius:24px;
+  min-height:112px;padding:20px 16px;gap:10px;
+  box-shadow:0 10px 24px -12px rgba(2,43,30,.55);
+  transition:background .2s,transform .2s,box-shadow .2s;
+}
+.op[data-i="1"]{--ta:#6ee7a1;--tb:#bbf7d0}
+.op[data-i="2"]{--ta:#fbbf24;--tb:#ddd6fe}
+.op[data-i="3"]{--ta:#fb7185;--tb:#fed7aa}
+/* círculo de color en la esquina (igual que los paneles) */
+.op[data-i]::after{
+  clip-path:none;width:84px;height:84px;top:-34px;right:-34px;border-radius:50%;
+  background:var(--tb);opacity:.85;
+}
+.op[data-i]:hover{background:var(--pri);transform:translateY(-2px);box-shadow:0 14px 26px -12px rgba(0,106,61,.6);border:0}
+.op[data-i] .est{
+  display:inline-block;font-size:12px;letter-spacing:3px;padding:5px 12px 5px 15px;border-radius:999px;
+  background:rgba(255,255,255,.1);color:var(--ta);text-shadow:none;
+}
+.op[data-i] b{font-family:var(--serif);font-size:24px;color:#fff;padding:0}
+
+/* ---------- CLIENTAS: ficha compacta ---------- */
+.cli-datos{padding:16px 22px 18px}
+.cli-datos::before{display:none}           /* sin cinta "FICHA" */
+.cli-cab{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"id stats btns";
+  gap:10px 18px;align-items:center;padding-right:0;
+}
+.cli-id{gap:12px}
+.av.grande{width:44px;height:44px;font-size:20px;box-shadow:0 0 0 4px rgba(0,106,61,.07)}
+.cli-id .eyebrow{font-size:9.5px;line-height:1}
+.cli-id h2{font-size:22px;line-height:1.2;margin:2px 0 0}
+.resumen-cli{gap:8px;font-size:10px}
+.resumen-cli>div{min-width:0;padding:5px 12px;border-radius:14px}
+.resumen-cli>div b{font-size:15px;line-height:1.2}
+.cli-btns{flex-direction:row;gap:12px}
+.cli-btns .btn-verde{height:34px;padding:0 16px;font-size:12px;box-shadow:0 3px 10px rgba(0,106,61,.2)}
+.cli-btns .btn-lnk{font-size:11px}
+.cli-campos{gap:10px 12px;margin-top:14px;padding-top:14px}
+.cli-campos label.cam{font-size:10px;margin-bottom:4px}
+.cli-campos input[type=text]{height:38px;padding:0 14px;font-size:13px}
+.cli-campos .cmp.amb,.cli-campos .cmp.ver,.cli-campos .cmp.ros{padding:9px 12px 11px;border-radius:16px}
+.cli-campos .cmp textarea,.cli-campos textarea{min-height:60px;font-size:13px}
+
+@media (max-width:1180px){
+  .cli-cab{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"id btns" "stats stats"}
+}
+
+/* =========================================================
+   AJUSTES 3 · tamaño normal de cards + estética clara en TODAS
+   ========================================================= */
+
+/* ---------- 1. Deshacer el estiramiento: tamaño natural por defecto ---------- */
+.hoja-contenedor-cards{flex:0 1 auto;min-height:0;display:block;overflow-y:auto}
+.hoja-contenedor-cards>.paso{display:block;flex:none;height:auto}
+.paso .opciones,.paso .opciones.tier{flex:none;min-height:0;grid-auto-rows:auto;align-content:start;margin-top:10px}
+.paso .opciones.tier{grid-template-columns:repeat(2,minmax(0,1fr))}
+.paso .opciones.largo{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:12px}
+.paso .opciones.largo .op{min-height:78px}
+.opciones.servicio .op,
+.opciones:not(.tier):not(.largo) .op{min-height:96px;padding:16px 18px 20px;justify-content:flex-start}
+.opciones.servicio .op b,
+.opciones:not(.tier):not(.largo) .op b{font-size:17px;line-height:1.25}
+.opciones.servicio .op small{font-size:12px;margin-top:4px}
+.opciones.servicio .op .pr{margin-top:8px;padding-top:8px;font-size:19px}
+.op[data-i]{min-height:132px}
+
+/* ---------- 2. Solo cuando hay MUCHAS opciones (7 o más, ej. Retoques deco): llenar el alto ---------- */
+.hoja-contenedor-cards:has(.opciones .op:nth-child(7)){flex:1;display:flex;flex-direction:column;overflow:hidden}
+.hoja-contenedor-cards:has(.opciones .op:nth-child(7))>.paso{display:flex;flex-direction:column;flex:1;min-height:0}
+.paso .opciones:has(.op:nth-child(7)){flex:1;min-height:0;grid-auto-rows:minmax(0,1fr);align-content:stretch}
+.paso .opciones:has(.op:nth-child(7)) .op{min-height:0;padding:10px 16px 14px}
+.paso .opciones:has(.op:nth-child(7)) .op b{font-size:clamp(13px,1.9vh,16px);line-height:1.3;padding-right:22px}
+.paso .opciones:has(.op:nth-child(7)) .op small{font-size:clamp(10px,1.5vh,11.5px);margin-top:2px}
+.paso .opciones:has(.op:nth-child(7)) .op .pr{margin-top:auto;padding-top:4px;font-size:clamp(14px,2.2vh,18px)}
+
+@media (max-width:1180px){
+  .hoja-contenedor-cards,
+  .hoja-contenedor-cards:has(.opciones .op:nth-child(7)){display:block;overflow:visible;flex:none}
+  .paso .opciones:has(.op:nth-child(7)){grid-auto-rows:auto}
+}
+
+/* ---------- 3. Estética clara (como Plus/Premium y el login) en TODAS las cards de selección ---------- */
+.op{
+  --onda:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 30' preserveAspectRatio='none' fill='none'%3E%3Cpath d='M0,18 Q50,6 100,16 T200,12' stroke='%23e0b93b' stroke-width='2.5' stroke-linecap='round' opacity='.75'/%3E%3C/svg%3E");
+}
+.opciones .op:not([data-i]){
+  --tn:#f4a259;
+  background:var(--onda) bottom/100% 14px no-repeat,linear-gradient(180deg,#f6fffa,#e4f8ec);
+  border:2px solid var(--tn);
+  box-shadow:0 10px 24px -14px rgba(2,43,30,.35);
+  color:var(--ink);
+}
+.opciones .op:not([data-i]):nth-child(4n+2){--tn:var(--pri)}
+.opciones .op:not([data-i]):nth-child(4n+3){--tn:#ec7fb0}
+.opciones .op:not([data-i]):nth-child(4n+4){--tn:#8b5cf6}
+.opciones .op:not([data-i]):hover{
+  background:var(--onda) bottom/100% 14px no-repeat,linear-gradient(180deg,#fff,#d6f5e3);
+  box-shadow:0 14px 26px -14px rgba(0,106,61,.45);
+  transform:translateY(-2px);
+}
+
+/* esquina: círculo de color (en vez del triángulo) en todas */
+.op::after{clip-path:none;width:72px;height:72px;top:-30px;right:-30px;border-radius:50%;opacity:.9}
+.op[data-i]::after{width:84px;height:84px;top:-34px;right:-34px}
+
+/* largo/talle: sin la barrita lateral, el borde ya lleva el color */
+.opciones.largo .op::before{display:none}
+.opciones.largo .op{padding-bottom:20px}
+
+/* =========================================================
+   AJUSTES 4 · títulos del inicio, sin borde de color, hover sutil
+   ========================================================= */
+
+/* ---------- Primera card (Corte / Color / Nutri / Otro): títulos más grandes y llamativos ---------- */
+.opciones.inicio .op{min-height:104px;padding:18px 20px 22px}
+.opciones.inicio .op b{
+  font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.15;letter-spacing:-.01em;color:var(--ink);
+}
+.opciones.inicio .op small{font-size:13px;margin-top:6px}
+
+/* ---------- Sin borde de color en ninguna card ---------- */
+.opciones .op:not([data-i]),
+.op[data-i]{border:0}
+
+/* ---------- Hover como antes: solo un saltito, sin cambio de sombra ni de degradé ---------- */
+.opciones .op:not([data-i]):hover{
+  background:var(--onda) bottom/100% 14px no-repeat,linear-gradient(180deg,#f6fffa,#e4f8ec);
+  box-shadow:0 10px 24px -14px rgba(2,43,30,.35);
+  transform:translateY(-2px);
+}
+.op[data-i]:hover{
+  background:var(--onda) bottom/100% 22px no-repeat,linear-gradient(180deg,#f6fffa,#e4f8ec);
+  box-shadow:0 10px 24px -14px rgba(2,43,30,.35);
+  transform:translateY(-2px);
+}
+.op:active{transform:translateY(0)}
+
+/* =========================================================
+   UNIFICACIÓN · TODAS las cards de selección se comportan igual
+   ========================================================= */
+.opciones .op,
+.opciones .op[data-i]{
+  --onda:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 30' preserveAspectRatio='none' fill='none'%3E%3Cpath d='M0,18 Q50,6 100,16 T200,12' stroke='%23e0b93b' stroke-width='2.5' stroke-linecap='round' opacity='.75'/%3E%3C/svg%3E");
+  background:var(--onda) bottom/100% 14px no-repeat,linear-gradient(180deg,#f6fffa,#e4f8ec)!important;
+  border:0!important;
+  color:var(--ink)!important;
+  box-shadow:0 10px 24px -14px rgba(2,43,30,.35)!important;
+  transform:none;
+  transition:transform .2s ease!important;
+}
+.opciones .op:hover,
+.opciones .op[data-i]:hover{
+  background:var(--onda) bottom/100% 14px no-repeat,linear-gradient(180deg,#f6fffa,#e4f8ec)!important;
+  box-shadow:0 10px 24px -14px rgba(2,43,30,.35)!important;
+  border:0!important;
+  transform:translateY(-2px)!important;
+}
+.opciones .op:active,
+.opciones .op[data-i]:active{transform:translateY(0)!important}
+
+/* texto igual en todas */
+.opciones .op b,
+.opciones .op[data-i] b{color:var(--ink)!important}
+.opciones .op small{color:var(--ink2)!important}
+
+/* Plus / Premium: mismo tamaño de padding que el resto, solo cambia el color del círculo y las estrellas */
+.op[data-i]{--tb:#bbf7d0}
+.op[data-i="1"]{--tb:#bbf7d0}
+.op[data-i="2"]{--tb:#ddd6fe}
+.op[data-i="3"]{--tb:#fed7aa}
+.op[data-i]::after{background:var(--tb)!important;opacity:.9;clip-path:none;width:72px;height:72px;top:-30px;right:-30px;border-radius:50%}
+.op[data-i] .est{background:#fff!important;border:1px solid var(--mint3);color:#00864e!important;text-shadow:none;box-shadow:0 2px 6px rgba(2,43,30,.06)}
+.op[data-i="2"] .est,.op[data-i="3"] .est{color:#b45309!important}
+
+/* =========================================================
+   NIVELES · 3 opciones (Básico / Plus / Premium) una al lado de la otra, cada una con sus estrellas
+   ========================================================= */
+
+/* 3 niveles → 3 columnas */
+.paso .opciones.tier:has(.op:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.paso .opciones.tier:has(.op:nth-child(3)) .op b{font-size:22px}
+
+/* Estrellas con el mismo estilo en TODAS las cards que tengan nivel (nivel, largo, etc.) */
+.op .est{
+  display:inline-block;font-size:12px;letter-spacing:3px;padding:5px 12px 5px 15px;border-radius:999px;
+  background:#fff;border:1px solid var(--mint3);color:#00864e;text-shadow:none;
+  box-shadow:0 2px 6px rgba(2,43,30,.06);
+}
+.op:has(.est){align-items:center;text-align:center;justify-content:center;gap:8px}
+.op:has(.est) b{font-family:var(--serif);font-size:22px;padding:0}
+
+/* El color de las estrellas según el nivel (1 = verde, 2 = verde, 3 = dorado) */
+.op .est:is([data-n="3"]){color:#b45309}
+
+/* Largo / talle: si hay 3 opciones, también una al lado de la otra */
+.paso .opciones.largo:has(.op:nth-child(3):last-child) .op{flex:1 1 0;min-width:0}
+
+/* =========================================================
+   CARDS DE SELECCIÓN · blanco liso como la card final
+   ========================================================= */
+.opciones .op,
+.opciones .op[data-i],
+.opciones .op:not([data-i]),
+.opciones .op:hover,
+.opciones .op[data-i]:hover,
+.opciones .op:not([data-i]):hover,
+.opciones.largo .op{
+  background:var(--onda) bottom/100% 14px no-repeat,#fff!important;
+  box-shadow:var(--sh1)!important;
+}
+.opciones .op[data-i],
+.opciones .op[data-i]:hover{
+  background:var(--onda) bottom/100% 14px no-repeat,#fff!important;
+}
+
+/* =========================================================
+   FICHA DE CLIENTA · versión final (reemplaza los bloques anteriores)
+   ========================================================= */
+.vista .cli-datos{
+  position:relative;overflow:hidden;isolation:isolate;
+  padding:16px 24px 18px!important;
+  background:linear-gradient(90deg,var(--pri),var(--pri-fix,#2fd17f) 60%,#fe7488) top/100% 4px no-repeat,#fff!important;
+}
+/* detalle de color en el borde: círculo en la esquina (en vez de la cinta) */
+.vista .cli-datos::before{
+  display:block!important;content:''!important;position:absolute;top:-44px;right:-44px;left:auto;
+  width:120px;height:120px;padding:0;transform:none;border-radius:50%;
+  background:#fef08a;opacity:.7;z-index:-1;font-size:0;
+}
+
+/* cabecera: [C + nombre] [turnos | última visita] [guardar / eliminar] */
+.vista .cli-cab{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;grid-template-areas:"id stats btns"!important;
+  gap:10px 24px;align-items:center;padding-right:34px!important;
+}
+.vista .cli-id{grid-area:id;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:14px!important}
+.vista .cli-id>div{display:block!important;flex:1 1 auto;min-width:0}
+.vista .av.grande{width:52px!important;height:52px!important;font-size:22px!important;flex:none!important;margin:0!important}
+.vista .cli-id .eyebrow{display:block;font-size:10px;line-height:1.1;margin:0 0 2px}
+.vista .cli-id h2{display:block;font-size:26px!important;line-height:1.15;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* turnos / última visita: números verdes un poco más grandes */
+.vista .resumen-cli{grid-area:stats;display:flex;gap:10px!important;font-size:11px!important;margin:0}
+.vista .resumen-cli>div{min-width:0!important;padding:7px 16px!important;border-radius:16px!important;text-align:center}
+.vista .resumen-cli>div b{display:block;font-size:20px!important;line-height:1.2!important;color:var(--pri)}
+.vista .resumen-cli>div:nth-child(2) b{color:#854d0e}
+
+/* guardar arriba, eliminar debajo */
+.vista .cli-btns{grid-area:btns;display:flex!important;flex-direction:column!important;align-items:center!important;gap:6px!important}
+.vista .cli-btns .btn-verde{height:40px!important;padding:0 24px!important;font-size:13px!important}
+.vista .cli-btns .btn-lnk{font-size:11px!important}
+
+/* campos: poco espacio bajo la línea y entre filas */
+.vista .cli-campos{
+  display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:8px 14px!important;margin-top:10px!important;padding-top:10px!important;border-top:1px solid var(--mint3);
+}
+.vista .cli-campos .cmp{padding:0!important;background:none!important;border-radius:0!important;min-width:0}
+.vista .cli-campos label.cam{display:flex;align-items:center;gap:8px;margin:0 0 3px!important;font-size:10px;letter-spacing:.05em;white-space:nowrap}
+
+/* inputs y cajas de texto: mismo ancho de columna (todos alineados con Nombre/Contacto) y texto más alto */
+.vista .cli-campos input[type=text]{height:46px!important;padding:0 16px!important;font-size:14px!important;width:100%;box-sizing:border-box}
+.vista .cli-campos textarea{
+  display:block;width:100%;box-sizing:border-box;min-height:88px!important;padding:12px 16px!important;
+  font-size:14px!important;line-height:1.4;resize:none;border-radius:22px;
+}
+/* el color de cada nota va en la caja, no en un contenedor con padding */
+.vista .cli-campos .cmp.amb textarea{background:#fff8dc!important}
+.vista .cli-campos .cmp.ver textarea{background:#e4f8ec!important}
+.vista .cli-campos .cmp.ros textarea{background:#ffeef2!important}
+
+@media (max-width:1180px){
+  .vista .cli-cab{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"id btns" "stats stats"!important;padding-right:0!important}
+  .vista .cli-campos{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .vista .cli-campos>div{grid-column:span 2!important}
+}
+
+/* Números de turnos y última visita: ambos en verde */
+.vista .resumen-cli>div b,
+.vista .resumen-cli>div:nth-child(2) b{color:var(--pri)!important}
+.vista .resumen-cli>div:nth-child(2){background:var(--mint)!important}
+
+/* Todas las cajas de texto del mismo color que Nombre y Contacto */
+.vista .cli-campos .cmp.amb textarea,
+.vista .cli-campos .cmp.ver textarea,
+.vista .cli-campos .cmp.ros textarea,
+.vista .cli-campos textarea{background:var(--mint)!important}
+
+/* Turnos y última visita: sin card, iguales */
+.vista .resumen-cli>div,
+.vista .resumen-cli>div:nth-child(1),
+.vista .resumen-cli>div:nth-child(2){
+  background:none!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  padding:0 10px!important;
+}
