@@ -33,14 +33,14 @@ const Clientas = (() => {
     const paginas = Math.max(1, Math.ceil(visitas.length / POR_PAG));
     pag = Math.min(pag, paginas - 1);
     const ver = visitas.slice(pag * POR_PAG, pag * POR_PAG + POR_PAG);
-    const campo = (k, t, span, filas = 0) => `<div style="grid-column:span ${span}"><label class="cam">${t}</label>${filas ? `<textarea rows="${filas}" data-k="${k}">${h(c[k] || '')}</textarea>` : `<input type="text" data-k="${k}" value="${h(c[k] || '')}">`}</div>`;
-    $('#cl-ficha', el).innerHTML = `<div class="panel cli-datos"><div class="cli-cab"><div><div class="eyebrow">Ficha</div><h2>${h(c.nombre)}</h2></div>
-        <div class="resumen-cli"><div class="turnos-con-mas"><button class="btn-mas" data-acc="asociar" title="Asociar turnos del historial">+</button><div><b>${validas.length}</b>turnos</div></div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
+    const campo = (k, t, span, filas = 0, tono = '') => `<div class="cmp ${tono}" style="grid-column:span ${span}"><label class="cam">${t}</label>${filas ? `<textarea rows="${filas}" data-k="${k}">${h(c[k] || '')}</textarea>` : `<input type="text" data-k="${k}" value="${h(c[k] || '')}">`}</div>`;
+    $('#cl-ficha', el).innerHTML = `<div class="panel cli-datos"><div class="cli-cab"><div class="cli-id"><span class="av grande">${h((c.nombre || '?').trim().charAt(0).toUpperCase())}</span><div><div class="eyebrow">Ficha</div><h2>${h(c.nombre)}</h2></div></div>
+        <div class="resumen-cli"><div><b>${validas.length}</b>turnos</div><div><b>${validas.length ? fechaLarga(validas[0].fecha) : '—'}</b>última visita</div></div>
         <div class="cli-btns"><button class="btn-verde" data-acc="guardar">Guardar ficha</button>
           <button class="btn-lnk" data-acc="eliminar" ${visitas.length ? 'disabled title="Tiene turnos asociados: no se puede eliminar"' : ''}>Eliminar ficha</button></div></div>
-      <div class="cli-campos">${campo('nombre', 'Nombre', 3)}${campo('contacto', 'Contacto', 3)}${campo('ficha', 'Ficha', 2, 2)}${campo('observacion', 'Observación', 2, 2)}${campo('notas_importantes', 'Notas importantes', 2, 2)}</div></div>
+      <div class="cli-campos">${campo('nombre', 'Nombre', 3)}${campo('contacto', 'Contacto', 3)}${campo('ficha', 'Ficha', 2, 2, 'amb')}${campo('observacion', 'Observación', 2, 2, 'ver')}${campo('notas_importantes', 'Notas importantes', 2, 2, 'ros')}</div></div>
       <div class="panel cli-hist"><div class="hist-cab"><h3>Historial de turnos</h3>
-        <div class="pager"><button class="chev" data-acc="pag" data-d="-1" ${pag === 0 ? 'disabled' : ''}>‹</button><span>${visitas.length ? `${pag * POR_PAG + 1}–${pag * POR_PAG + ver.length} de ${visitas.length}` : '0'}</span><button class="chev" data-acc="pag" data-d="1" ${pag >= paginas - 1 ? 'disabled' : ''}>›</button></div></div>
+        <div class="hist-acc"><button class="btn-mas" data-acc="asociar" title="Asociar turnos del historial">+</button><div class="pager"><button class="chev" data-acc="pag" data-d="-1" ${pag === 0 ? 'disabled' : ''}>‹</button><span>${visitas.length ? `${pag * POR_PAG + 1}–${pag * POR_PAG + ver.length} de ${visitas.length}` : '0'}</span><button class="chev" data-acc="pag" data-d="1" ${pag >= paginas - 1 ? 'disabled' : ''}>›</button></div></div></div>
         <div class="hist-lista">${ver.length ? ver.map((v) => `<div class="visita ${v.anulado ? 'anulado' : ''}" data-acc="cobro" data-id="${v.id}"><div class="v-izq"><div class="v-fecha">${fechaLarga(v.fecha)}${v.anulado ? ' <span class="tag mal">Anulado</span>' : ''}</div>
           <ul>${v.servicios.map((s) => `<li>${h(s.recorrido.replaceAll(' › ', ' · '))} · ${peso(s.precio_cobrado)}</li>`).join('')}</ul>${v.ficha ? `<small class="nota">Ficha del turno: ${h(v.ficha)}</small>` : ''}</div><div class="v-precio">${peso(v.total)}</div></div>`).join('') : '<p class="nota">Todavía no tiene turnos cobrados.</p>'}</div></div>`;
     await lista();

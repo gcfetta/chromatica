@@ -39,7 +39,10 @@ function calcular(hasta) {
   const ultimo = db.prepare('SELECT hasta FROM cierre WHERE anulado = 0 ORDER BY id DESC LIMIT 1').get();
 
   return {
-    desde: ultimo?.hasta ?? (cobros.length ? cobros.map((c) => c.fecha).sort()[0] : null),
+     desde: (() => {
+      const min = cobros.length ? cobros.map((c) => c.fecha).sort()[0] : null;
+      return ultimo && (!min || min.slice(0, 10) >= ultimo.hasta) ? ultimo.hasta : min;
+    })(),
     hasta,
     cantidad_cobros: cobros.length,
     total_cobrado, pagos_empleados, gastos, retiros,
@@ -124,8 +127,7 @@ router.post('/:id/anular', (req, res) => {
   const c = db.prepare('SELECT * FROM cierre WHERE id = ?').get(id);
   if (!c) throw new ApiError(404, 'Cierre inexistente');
   if (c.anulado) throw new ApiError(409, 'Ya estaba anulado');
-  const ultimo = db.prepare('SELECT id FROM cierre WHERE anulado = 0 ORDER BY id DESC LIMIT 1').get();
-  if (ultimo.id !== id) throw new ApiError(409, 'Solo se puede anular el último cierre');
+
   db.transaction(() => {
     db.prepare('UPDATE cierre SET anulado = 1 WHERE id = ?').run(id);
     db.prepare('UPDATE turno SET cierre_id = NULL WHERE cierre_id = ?').run(id);

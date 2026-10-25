@@ -38,7 +38,7 @@ const Personal = (() => {
           <button class="btn-oro" data-acc="crear-emp">Agregar</button></div></div>
       ${off.length ? `<div class="off-cab"><h3>Desactivados <small>${off.length}</small></h3><button class="btn-lnk" data-acc="ver-off">${verOff ? 'Ocultar' : 'Mostrar'}</button></div>
         ${verOff ? `<div class="tarjetas">${off.map((e) => tarjeta(e, num.get(e.id))).join('')}<i hidden></i></div>` : ''}` : ''}
-      <div id="cuenta" style="margin-top:24px;max-width:560px"></div>`;
+      <section class="sec-cuenta"><div class="sec-sep"><span>Acceso al sistema</span></div><div id="cuenta"></div></section>`;
     Cuenta.montar($('#cuenta', el));
   }
 

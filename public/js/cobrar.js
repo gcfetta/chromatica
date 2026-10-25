@@ -85,8 +85,17 @@ const Cobrar = (() => {
       
     let cuerpo = '';
     if (paso.tipo === 'opciones') {
-      cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones">${paso.ops.map((o) =>
-        `<button class="op" data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}"><b style="font-size:20px; line-height:1.2;">${h(o.t)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`).join('')}</div></div>`;
+            // tipo de paso: nivel (Plus/Premium…, con estrellas), largo/talle, o servicio (con precio o duración)
+      const tipo = paso.titulo === 'Elegí el nivel' ? 'nivel' : paso.titulo === 'Elegí el largo o talle' ? 'largo' : 'servicio';
+      const niv = K.config.niveles || [];
+      const card = (o) => {
+        const i = niv.indexOf(o.t);
+        const est = tipo === 'nivel' && i >= 0 ? `<span class="est">${'★'.repeat(i + 1)}</span>` : '';
+        const cls = tipo === 'largo' && o.t.length > 13 ? ' ancho' : '';
+        return `<button class="op${cls}" ${tipo === 'nivel' ? `data-i="${Math.max(0, i)}"` : ''} data-acc="elegir" data-clave="${h(o.clave)}" data-label="${h(o.t)}">${est}<b>${h(o.t)}</b>${o.precio != null ? `<span class="pr">${peso(o.precio)}</span>` : ''}${o.s ? `<small>${h(o.s)}</small>` : ''}</button>`;
+      };
+      cuerpo = `<div class="paso"><h3>${h(paso.titulo)}</h3>${paso.nota ? `<p class="nota">${h(paso.nota)}</p>` : ''}<div class="opciones ${tipo === 'nivel' ? 'tier' : tipo}">${paso.ops.map(card).join('')}</div></div>`;
+
     } else if (paso.tipo === 'hoja') cuerpo = hojaHTML(paso);
     else cuerpo = otroHTML();
 

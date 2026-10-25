@@ -37,9 +37,13 @@ const Ganancias = (() => {
     await pintar();
   }
 
+    // Se pide el contenido primero y recién después se cambia: el título y las pestañas no se redibujan (sin parpadeo)
   async function pintar() {
-    el.innerHTML = `<h1>Ganancias</h1><div class="tabs">${TABS.map(([k, t]) => `<button class="tab ${k === tab ? 'on' : ''}" data-acc="tab" data-k="${k}">${t}</button>`).join('')}</div><div id="g-cuerpo"></div>`;
-    try { $('#g-cuerpo', el).innerHTML = await VISTA[tab](); } catch (e) { if (e.status !== 401) toast(e.message, { error: true }); }
+    let html;
+    try { html = await VISTA[tab](); } catch (e) { if (e.status !== 401) toast(e.message, { error: true }); return; }
+    if (!$('#g-cuerpo', el)) el.innerHTML = `<h1>Ganancias</h1><div class="tabs">${TABS.map(([k, t]) => `<button class="tab" data-acc="tab" data-k="${k}">${t}</button>`).join('')}</div><div id="g-cuerpo"></div>`;
+    el.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.k === tab));
+    $('#g-cuerpo', el).innerHTML = html;
   }
 
   // ---------- Resumen ----------
@@ -86,7 +90,8 @@ const Ganancias = (() => {
       const POR = 5, paginas = Math.max(1, Math.ceil(l.length / POR));
       MV.pag = Math.min(MV.pag, paginas - 1);
       const ver = l.slice(MV.pag * POR, MV.pag * POR + POR);
-    return `<div class="panel" style="margin-bottom:16px"><div class="eyebrow">Nuevo movimiento</div>
+      const NOM = { adelanto: 'Adelanto', gasto: 'Gasto', retiro: 'Retiro' };
+      return `<div class="panel" style="margin-bottom:16px"><div class="eyebrow">Nuevo movimiento</div>
       <div class="form-mov"><select id="mv-tipo" data-campo="mv-tipo"><option value="gasto">Gasto</option><option value="adelanto">Adelanto a empleado</option><option value="retiro">Retiro de la dueña</option></select>
         <select id="mv-emp" hidden>${emps.filter((e) => e.activo).map((e) => `<option value="${e.id}">${h(e.nombre)}</option>`).join('')}</select>
         <input type="number" min="0" id="mv-monto" placeholder="Monto"><input type="text" id="mv-concepto" placeholder="Concepto (opcional)"><button class="btn-oro" data-acc="mv-agregar">Agregar</button></div>
@@ -103,7 +108,7 @@ const Ganancias = (() => {
     const [emps, r] = await Promise.all([api('GET', '/api/empleados'), api('GET', `/api/cierres/pagos?${P.mes ? `mes=${P.mes}&` : ''}empleado_id=${P.emp}`)]);
     P.mes = r.mes;
     const i = r.meses.indexOf(r.mes);
-    return `<div class="per-nav"><label class="filtro">Empleado <select data-campo="p-emp"><option value="">Todos</option>${emps.map((e) => `<option value="${e.id}" ${String(e.id) === String(P.emp) ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}</select></label>
+    return `<div class="per-nav"><label class="filtro">Empleado <select data-campo="p-emp"><option value="">Todos</option>${emps.filter((e) => e.activo || String(e.id) === String(P.emp)).map((e) => `<option value="${e.id}" ${String(e.id) === String(P.emp) ? 'selected' : ''}>${h(e.nombre)}</option>`).join('')}</select></label>
         <span class="sp"></span><div class="per-pill">${chev('pmes', `data-m="${r.meses[i + 1] || ''}"`, '‹', !r.meses[i + 1])}<div class="per-lbl"><b>${r.mes ? nombreMes(r.mes) : 'Sin pagos'}</b></div>${chev('pmes', `data-m="${i > 0 ? r.meses[i - 1] : ''}"`, '›', !(i > 0))}</div></div>
       ${r.filas.length ? `<div class="panel"><table class="tabla"><tr><th>Cierre</th><th>Empleado</th><th class="r">Por %</th><th class="r">Por horas</th><th class="r">Total</th><th class="r">Adelantos</th><th class="r">Pagado</th></tr>
         ${r.filas.map((f) => `<tr><td>${fdia(f.hasta)}</td><td>${conAv(f.empleado)}</td><td class="r">${peso(f.por_porcentaje)}</td><td class="r">${peso(f.por_horas)}</td><td class="r">${peso(f.pago_total)}</td><td class="r">− ${peso(f.adelantos)}</td><td class="r"><b>${peso(f.neto)}</b></td></tr>`).join('')}</table></div>
@@ -131,7 +136,7 @@ const Ganancias = (() => {
       <div style="margin-top:14px"><button class="btn-verde" data-acc="cerrar-caja" ${vacio || bloqueado ? 'disabled' : ''}>Cerrar caja</button></div></div>
       <div class="panel"><div class="hist-cab"><h3>Cierres anteriores</h3>${g ? `<div class="pager">${chev('cmes', 'data-d="1"', '‹', C.i >= grupos.length - 1)}<span><b>${nombreMes(g.ym)}</b></span>${chev('cmes', 'data-d="-1"', '›', C.i <= 0)}</div>` : ''}</div>
         ${g ? `<p class="nota">${g.items.length} ${g.items.length === 1 ? 'cierre' : 'cierres'} · cobrado ${peso(g.items.reduce((a, c) => a + c.total_cobrado, 0))} · ganancia ${peso(g.items.reduce((a, c) => a + c.ganancia_local, 0))}</p>
-          <table class="tabla"><tr><th>Período</th><th class="r">Cobrado</th><th class="r">Ganancia</th><th></th></tr>${g.items.map((c) => `<tr><td>${fdia(c.desde || '')}${c.desde ? ' → ' : 'hasta '}${fdia(c.hasta)}</td><td class="r">${peso(c.total_cobrado)}</td><td class="r">${peso(c.ganancia_local)}</td><td>${c.id === vivos[0].id ? `<button class="btn-lnk" data-acc="anular-cierre" data-id="${c.id}">Anular último cierre</button>` : ''}</td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay cierres.</p>'}</div></div>`;
+          <table class="tabla"><tr><th>Período</th><th class="r">Cobrado</th><th class="r">Ganancia</th><th></th></tr>${g.items.map((c) => `<tr><td>${fdia(c.desde || '')}${c.desde ? ' → ' : 'hasta '}${fdia(c.hasta)}</td><td class="r">${peso(c.total_cobrado)}</td><td class="r">${peso(c.ganancia_local)}</td><td><button class="btn-lnk" data-acc="anular-cierre" data-id="${c.id}">Anular</button></td></tr>`).join('')}</table>` : '<p class="nota">Todavía no hay cierres.</p>'}</div></div>`;
   }
 
   const VISTA = { resumen, historial, movimientos, pagos, cierre };
@@ -160,7 +165,7 @@ const Ganancias = (() => {
     'cerrar-caja': (_d, b) => doble(b, `Confirmar cierre hasta el ${fdia(C.hasta)}`, async () => {
       await api('POST', '/api/cierres', { hasta: C.hasta, nota: C.nota || null }); C.nota = ''; C.i = 0; estadoGuardado(true); toast('Caja cerrada'); await pintar();
     }),
-    'anular-cierre': (d, b) => doble(b, '¿Seguro? Los cobros vuelven a quedar abiertos', async () => { await api('POST', `/api/cierres/${d.id}/anular`, {}); toast('Cierre anulado'); await pintar(); }),
+    'anular-cierre': (d, b) => doble(b, '¿Seguro? Sus cobros y movimientos vuelven a quedar abiertos', async () => { await api('POST', `/api/cierres/${d.id}/anular`, {}); toast('Cierre anulado'); await pintar(); }),
   };
 
   async function onClick(ev) {

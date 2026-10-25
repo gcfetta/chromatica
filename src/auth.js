@@ -115,4 +115,29 @@ router.post('/cambiar-password', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Editar usuario y mail (pide la contraseña actual). No toca los datos del sistema.
+router.post('/cuenta/editar', requireAuth, (req, res) => {
+  if (bloqueado()) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+  const { usuario, mail, password } = req.body || {};
+  const u = db.prepare('SELECT * FROM usuario WHERE id = ?').get(req.userId);
+  if (!checkPw(password || '', u.password_hash)) { fallo(); return res.status(401).json({ error: 'Contraseña actual incorrecta' }); }
+  if (String(usuario || '').trim().length < 3) return res.status(400).json({ error: 'El usuario debe tener 3+ caracteres' });
+  if (!/^\S+@\S+\.\S+$/.test(String(mail || '').trim())) return res.status(400).json({ error: 'Ingresá un mail válido' });
+  db.prepare('UPDATE usuario SET usuario = ?, mail_recuperacion = ? WHERE id = ?').run(String(usuario).trim(), String(mail).trim(), u.id);
+  audit('usuario', u.id, 'editar_cuenta');
+  res.json({ ok: true });
+});
+
+// Eliminar la cuenta (pide la contraseña). Los datos del sistema quedan; al volver a entrar se crea una cuenta nueva.
+router.post('/cuenta/eliminar', requireAuth, (req, res) => {
+  if (bloqueado()) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+  const u = db.prepare('SELECT * FROM usuario WHERE id = ?').get(req.userId);
+  if (!checkPw(req.body?.password || '', u.password_hash)) { fallo(); return res.status(401).json({ error: 'Contraseña actual incorrecta' }); }
+  audit('usuario', u.id, 'eliminar_cuenta');
+  db.prepare('DELETE FROM usuario WHERE id = ?').run(u.id);
+  sesiones.clear();
+  res.setHeader('Set-Cookie', `${COOKIE}=; Max-Age=0; Path=/`);
+  res.json({ ok: true });
+});
+
 module.exports = { router, requireAuth };

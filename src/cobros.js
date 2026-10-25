@@ -208,8 +208,9 @@ router.patch('/:id', (req, res) => {
   const t = db.prepare('SELECT * FROM turno WHERE id = ?').get(id);
   if (!t) throw new ApiError(404, 'Cobro inexistente');
   if (t.anulado) throw new ApiError(409, 'El cobro está anulado');
-  if (t.cierre_id) throw new ApiError(409, 'El cobro ya está en un cierre de caja');
   const b = req.body || {};
+  // asociar o quitar la clienta no toca el dinero: se permite aunque la caja esté cerrada
+  if (t.cierre_id && !Object.keys(b).every((k) => k === 'cliente_id')) throw new ApiError(409, 'El cobro ya está en un cierre de caja');
   const cambios = {};
   if ('cliente_id' in b) {
     if (b.cliente_id != null && !db.prepare('SELECT 1 FROM cliente WHERE id = ?').get(Number(b.cliente_id)))
